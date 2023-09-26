@@ -64,7 +64,7 @@ DominantCommunity$Date <- factor(DominantCommunity$Date, levels = c("2022-June",
 
 ### New code chunk that calculates absolute veg cover relative to bare ground (i.e. what percent of the vegetation present in each quadrat each community makes up)
 
-DominantCommunityAbsolute <- vegdata %>% 
+communities <- vegdata %>% 
   mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Coytote_Bush','BoMa'), as.numeric) %>% 
   mutate_if(is.numeric, list(~replace_na(., 0))) %>% 
   mutate(Total_Veg = 25-(BaGr_1 + BaGr_2)) %>% 
@@ -75,18 +75,43 @@ DominantCommunityAbsolute <- vegdata %>%
   mutate(Transition = ((select(.,AtPx:SpMa,MeIn:Lolium,GrSt:MePo, Vicia:LeTr) %>% rowSums(na.rm = TRUE))/Total_Veg)*100) %>% 
   mutate(across(where(is.numeric), ~round(., 0))) %>% 
   mutate(Date = paste0(Year, "-", Month)) %>% 
-  pivot_longer(cols = c("Spartina", "Pickleweed", "Transition", "Bare_Ground"),
+  select(Date, Transect_ID, Distance_meters, Spartina, Pickleweed, Transition, Bare_Ground)
+
+#is this a problem? The values range from 4 - 900. I thought this was on a percent scale.
+unique(communities$Bare_Ground)
+
+#create a subset of the data with just the bare ground quadrats
+bare_ground_quadrats <- communities %>%
+  #used >= since there are some quadrats with greater than 100% -- not sure how to interpret this
+  filter(Bare_Ground >= 100) %>%
+  select(-c("Spartina", "Pickleweed", "Transition")) %>%
+  pivot_longer(cols = "Bare_Ground", names_to = "Community")
+  
+
+#for quadrats that have veg, determine which community type is dominant
+veg_quadrats <- communities %>%
+  filter(Bare_Ground < 100) %>%
+  select(-Bare_Ground) %>% 
+  pivot_longer(cols = c("Spartina", "Pickleweed", "Transition"),
                names_to = "Community") %>%
-  nest(data = c("Community", "value")) %>%
-  mutate(DominantCommunityAbsolute = map(.x = data, ~slice_max(.x, order_by = value, n = 1)),
-         .keep = "unused") %>%
-  unnest(DominantCommunityAbsolute) 
+  nest(data = c("Community", "value")) %>% 
+  mutate(dom = map(.x = data, ~slice_max(.x, order_by = value, n = 1)),
+         .keep = "unused") %>% 
+  unnest(dom) 
+
+#join the bare_ground quadrats back with the vegetated quadrats to get the complete data set back together for plotting
+all_quadrats <- rbind(bare_ground_quadrats,
+                      veg_quadrats,
+                      by = c("Date", "Transect_ID", "Distance_meters")) %>%
+  arrange(Transect_ID, Date)
 
 #And finally, to list in order of date:
 
 DominantCommunityAbsolute$Date <- factor(DominantCommunityAbsolute$Date, levels = c("2022-June", "2022-July", "2022-August", "2022-September", "2022-October", "2023-February","2023-April", "2023-June", "2023-August"))
 
-
+DominantCommunityAbsolute %>%
+  select(Date, Transect_ID, Distance_meters, Community, value) %>%
+  filter(Community == 'Bare_Ground')
 
 
 
