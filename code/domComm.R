@@ -27,7 +27,7 @@ DominantCommunity <- vegdata %>%
 
 
 
-###  Starting here I am using the raw veg data without any calculations  9/19/2023. This code chunk does not calculate veg cover relative to bare ground. 
+###  9/19/2023 Starting here I am using the raw veg data without any calculations. This code chunk DOES NOT calculate veg cover relative to bare ground. 
 # Code is superseded below.   
 
 
@@ -62,7 +62,7 @@ DominantCommunity$Date <- factor(DominantCommunity$Date, levels = c("2022-June",
 
 
 
-### New code chunk that calculates absolute veg cover relative to bare ground (i.e. what percent of the vegetation present in each quadrat each community makes up)
+### 9/26/2023 New code chunk that calculates absolute veg cover relative to bare ground (i.e. what percent of the vegetation present in each quadrat that each community makes #up)
 
 DominantCommunityAbsolute <- vegdata %>% 
   mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Coytote_Bush','BoMa'), as.numeric) %>% 
@@ -75,6 +75,7 @@ DominantCommunityAbsolute <- vegdata %>%
   mutate(Transition = ((select(.,AtPx:SpMa,MeIn:Lolium,GrSt:MePo, Vicia:LeTr) %>% rowSums(na.rm = TRUE))/Total_Veg)*100) %>% 
   mutate(across(where(is.numeric), ~round(., 0))) %>% 
   mutate(Date = paste0(Year, "-", Month)) %>% 
+  mutate(Bare_Ground = replace(Bare_Ground, Bare_Ground != 100, 0)) %>%
   pivot_longer(cols = c("Spartina", "Pickleweed", "Transition", "Bare_Ground"),
                names_to = "Community") %>%
   nest(data = c("Community", "value")) %>%
@@ -104,7 +105,6 @@ DominantCommunityAbsolute$Date <- factor(DominantCommunityAbsolute$Date, levels 
 
 
 ggplot(subset(DominantCommunityAbsolute, Transect_ID %in% "C1-L5"), aes(x= Distance_meters, y= Date)) +
-  geom_line() +
   geom_point(aes(x= Distance_meters, alpha= value, color= Community), shape= 15, size= 10) +
   geom_text(aes(label= value)) +
   labs(
