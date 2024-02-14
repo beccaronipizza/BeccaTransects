@@ -1,0 +1,64 @@
+---
+title: "VegData_stats"
+author: "Becca Morris"
+date: "2024-02-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(lme4)
+library(car)
+library(glmmTMB)
+
+setwd("~/GitHub/BeccaTransects/data")
+
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data")
+```
+
+# 1. creating the main data frame:
+```{r}
+vegdata2 <- vegdata %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 
+              'Taraxacum', 'Coytote_Bush','BoMa'), as.numeric) %>% 
+  mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_veg is simply what is remaining after subtracting the bare ground
+  mutate(across(SpFo:Total_Veg, ~ .x*4)) %>% 
+  mutate(Date = paste0(Year, "-", Month)) 
+```
+
+#### Using Full_Join to combine main data sheet and metadata sheet ####
+
+
+# 2. First I want to clean up the metadata sheet:
+```{r}
+vegmetadata %>% 
+  select(Transect_ID, Shoreline_End, Log_Presence)
+```
+
+# 3. Now to merge the two data frames together:
+```{r}
+vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>% 
+  select(-c(...9:...12))
+```
+
+#### Attempting a GLMM:
+```{r}
+hist((vegdatamerged$SpFo[vegdatamerged$Date == "2022-July"]))
+
+glmm1 <- glm((SaPa/100) ~ Shoreline_End*Log_Presence,
+               data = vegdatamerged[vegdatamerged$Date == "2022-July" & vegdatamerged$Zone == "U",],
+               family = gaussian)
+
+glmm1
+plot(glmm1)
+anova(glmm1, test = "F")
+
+```
+

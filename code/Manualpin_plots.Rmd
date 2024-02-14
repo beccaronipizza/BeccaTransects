@@ -1,0 +1,164 @@
+---
+title: "Sediment_Pin_Plots"
+author: "Becca Morris"
+date: "2024-02-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(ggrepel)
+
+```
+
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+```
+
+
+```{r}
+sedpindata <- read_xlsx("Sediment_Pin_Data.xlsx", sheet = "All_Data")
+```
+
+#prepping the dataframe
+```{r}
+sedpins <- sedpindata %>% 
+  mutate(Date = paste0(Year, "-", Month)) %>% #make new column combining year and month into date
+  mutate_at(c('Upper', 'Middle','Lower'), as.numeric) %>% #make Upper and Middle columns numeric (have NA's)
+  select(-c("Notes")) %>% #remove "Notes" column
+  mutate(across(where(is.numeric), ~round(., 1))) %>%  #round values to one decimal point
+  group_by(Pin_ID, Shoreline_End) %>% 
+  rename(Transect_ID = Pin_ID)
+#arrange(Date, .by_group = TRUE) %>% 
+
+
+sedpinmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/Sediment_Pin_Data.xlsx", sheet = "Metadata")
+
+#Since sedpins df (above already has a "Shoreline_End" column we need to remove this column form the veg meta data sheet so that there aren't issues merging two df's with the same column names
+
+sedpinmetadata <-select(sedpinmetadata, -c("Shoreline_End"))
+
+
+SedPinDataMerged <- full_join(sedpins, sedpinmetadata, by = "Transect_ID")
+```
+
+#3. Setting up df for EvW Plots. Also, I removed the reference plots in the first line.
+```{r}
+sedpinchange <- SedPinDataMerged[SedPinDataMerged$Log_Presence != "reference",] %>%   
+  mutate(UpperDiff = (last(Upper) - first(Upper))*-1) %>% 
+  mutate(MiddleDiff = (last(Middle) - first(Middle))*-1) %>% 
+  mutate(LowerDiff = (last(Lower) - first(Lower))*-1) %>% 
+  #mutate(UpperDiff = ifelse(is.na(UpperDiff) & Pin_ID == "C1-BW6", 3.2, UpperDiff)) %>% 
+  #mutate(UpperDiff = ifelse(is.na(UpperDiff) & Pin_ID == "C1-L5", 3.2, UpperDiff)) %>%
+  select(-c('Month',`Month_#`, 'Year', 'Date', 'Upper', 'Middle', 'Lower')) %>% #remove all unnecessary columns
+  distinct() %>%  #this removes repeated values for each month's calculation
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east"))) %>%
+  pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>% 
+  group_by(Shoreline_End, Pin_Location) %>% 
+  summarize(mean_difference = mean(Sediment_Change, na.rm = TRUE),
+            sd_difference = sd(Sediment_Change, na.rm = TRUE),
+            n_difference = n()) %>% #n should be 18 for west UpperDiff
+  mutate(se_difference = sd_difference/sqrt(n_difference)) 
+```
+
+
+## EvW *ONLY* Plotting
+```{r}
+sedpinplotEvW <- ggplot(sedpinchange, aes(x= Pin_Location, y= mean_difference, 
+                                                     group= Shoreline_End, 
+                                                     fill= Shoreline_End)) +
+  geom_hline(yintercept=0, linetype =1, color = "black") +
+  geom_col(position = position_dodge(0.87), color = "black", width = 0.85) +
+  geom_errorbar(aes(
+    ymin= mean_difference-se_difference, ymax= mean_difference+se_difference), size = 0.5, 
+    position = position_dodge(0.9), color= "black", width= .1) +
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff")) +  #labels renames the columns on the x-acis and limits sets the order in which each is laid out on the x axis
+  scale_fill_manual(values = cbp) +
+  labs(
+    title = "Manual Measurement: Mean Change in Sediment Pin Length",
+    subtitle = "(Apr 2022 - Sep 2023)   Positive value = accretion   Negative value = erosion",
+    y = "Mean Change (cm)",
+    x = "               Pin Location Relative to Transect Marsh Zone",
+    fill= "End of Shoreline",
+    caption = "*Error bars reflect standard error  **n (east) = 21 n (west = 17)") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=17),
+        legend.title = element_text(face = "bold", size=13),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 14),
+        plot.title = element_text(face = "bold", size = 16),
+        plot.subtitle = element_text(size = 12),
+        plot.caption = element_text(size = 12, hjust = 0.1),
+        panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+        strip.text = element_text(size = 18, color = "black")) 
+
+sedpinplotEvW
+```
+
+
+## Setting up df for EvW *AND* Log v No Log:
+```{r}
+sedpinchangecombo <- SedPinDataMerged[SedPinDataMerged$Log_Presence != "reference",] %>% 
+  select(Transect_ID, Shoreline_End, Upper, Middle, Lower, Date, Log_Presence) %>% 
+  mutate(UpperDiff = (last(Upper) - first(Upper))*-1) %>% 
+  mutate(MiddleDiff = (last(Middle) - first(Middle))*-1) %>% 
+  mutate(LowerDiff = (last(Lower) - first(Lower))*-1) %>% 
+  select(-c('Date', 'Upper', 'Middle', 'Lower')) %>% #remove all unnecessary columns
+  distinct() %>%  #this removes repeated values for each month's calculation
+  #mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east"))) %>% #this puts west first in the legend
+  pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>% 
+  group_by(Log_Presence, Shoreline_End, Pin_Location) %>% 
+  summarize(mean_difference = mean(Sediment_Change, na.rm = TRUE),
+            sd_difference = sd(Sediment_Change, na.rm = TRUE),
+            n_difference = n()) %>% 
+  mutate(se_difference = sd_difference/sqrt(n_difference)) %>% 
+  mutate(across(where(is.numeric), ~round(., 2)))
+
+```
+
+
+# EvW *AND* LvNL Plotting:
+```{r}
+cbp2 <- c("#E69F00", "#56B4E9", "#0072B2", "#CC79A7", "#D55E00", "#009E73", "#56B4E9", "#F0E442" , "#E69F00", "#000000")
+
+
+sedpincomboplot <- ggplot(sedpinchangecombo, aes(x= Pin_Location, y= mean_difference, 
+                                                           group = Log_Presence,
+                                                           fill= Log_Presence,
+                                                           label= mean_difference)) +
+  geom_hline(yintercept=0, linetype =1, color = "black") +
+  geom_col(position = position_dodge(0.87), color = "black", width = 0.85) +
+  geom_errorbar(aes(
+    ymin= mean_difference-se_difference, ymax= mean_difference+se_difference), size = 0.5, 
+    position = position_dodge(0.9), color= "black", width= .1) +
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff")) +  #labels renames the columns on the x-acis and limits sets the order in which each is laid out on the x axis
+  #geom_text_repel(aes(label = mean_difference, force = 1)) + #not sure why the "force" aes isnt working
+  facet_grid(Shoreline_End ~.,) +
+  scale_fill_manual(values = cbp2) +
+  labs(
+    title = "Manual Measurement: Mean Change in Sediment Pin Length ",
+    subtitle = "(Apr 2022 to Sep 2023)   Positive value = accretion   Negative value = erosion",
+    y = "Mean Change (cm)",
+    x = "Pin Location Relative to Transect Marsh Zone",
+    fill= "Log Presence",
+    caption = "*Error bars reflect standard error  **n (east) = 21 n (west = 17)") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=17),
+        legend.title = element_text(face = "bold", size=13),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 14),
+        plot.title = element_text(face = "bold", size = 16),
+        plot.subtitle = element_text(size = 12),
+        plot.caption = element_text(size = 12, hjust = 0.1),
+        panel.border = element_rect(color = "black", fill = NA, size = 0.5),
+        strip.text = element_text(size = 18, color = "black"))                           
+
+sedpincomboplot 
+
+```
+

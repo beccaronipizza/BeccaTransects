@@ -1,0 +1,110 @@
+---
+title: "Manualpin_stats"
+author: "Becca Morris"
+date: "2024-02-03"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(ggrepel)
+library(ggpubr)
+library(emmeans)
+library(magrittr)
+library(performance)
+
+setwd("~/GitHub/BeccaTransects/data")
+
+sedpindata <- read_xlsx("Sediment_Pin_Data.xlsx", sheet = "All_Data")
+```
+
+
+#2. prepping the dataframe
+```{r}
+sedpins <- sedpindata %>% 
+  mutate(Date = paste0(Year, "-", Month)) %>% #make new column combining year and month into date
+  mutate_at(c('Upper', 'Middle','Lower'), as.numeric) %>% #make Upper and Middle columns numeric (have NA's)
+  select(-c("Notes")) %>% #remove "Notes" column
+  mutate(across(where(is.numeric), ~round(., 1))) %>%  #round values to one decimal point
+  group_by(Pin_ID, Shoreline_End) %>% 
+  rename(Transect_ID = Pin_ID)
+#arrange(Date, .by_group = TRUE) %>% 
+
+
+
+sedpinmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/Sediment_Pin_Data.xlsx", sheet = "Metadata")
+
+sedpinmetadata <-select(sedpinmetadata, -c("Shoreline_End"))
+
+SedPinDataMerged <- full_join(sedpins, sedpinmetadata, by = "Transect_ID")
+
+
+sedpinchange <- SedPinDataMerged %>%   
+  mutate(UpperDiff = (last(Upper) - first(Upper))*-1) %>% 
+  mutate(MiddleDiff = (last(Middle) - first(Middle))*-1) %>% 
+  mutate(LowerDiff = (last(Lower) - first(Lower))*-1) %>% 
+  #mutate(UpperDiff = ifelse(is.na(UpperDiff) & Pin_ID == "C1-BW6", 3.2, UpperDiff)) %>% 
+  #mutate(UpperDiff = ifelse(is.na(UpperDiff) & Pin_ID == "C1-L5", 3.2, UpperDiff)) %>%
+  select(-c('Month',`Month_#`, 'Year', 'Date', 'Upper', 'Middle', 'Lower')) %>% #remove all unnecessary columns
+  distinct() %>%  #this removes repeated values for each month's calculation
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east"))) %>%
+  pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>% 
+  mutate(Pin_Location = as.factor(Pin_Location)) #make Pin_Location a factor
+```
+
+# 3. Running a basic GLM: without taking into account interactions (use #4 below):
+```{r}
+hist(sedpinchange$Sediment_Change)
+
+glm1 <- glm(Sediment_Change ~ Shoreline_End + Pin_Location + Log_Presence, data = sedpinchange, family = 'gaussian')
+
+plot(glm1)
+
+summary(glm1)
+
+anova(glm1, test = "F")
+```
+##Results: 
+
+#A. A Warning Popped up for the Residuals vs. Leverage test that there were 2 data points that exceeded a leverage of 1. These data points were listed as "reference" under Log_Presence, and therefore, seemed to be causing wonky results.
+
+#B. the glm shows strong main effects for shoreline end and pin location PLUS a "trend" for all three variables combined. Again, we think the trend may have something to do with the reference pin data since there were only four of them.
+
+# We decided to remove the reference pin data to see what results we get int he next step...
+
+
+# 4. Running a GLM taking interactions into account:
+```{r}
+hist(sedpinchange$Sediment_Change[sedpinchange$Log_Presence != "reference"])
+
+glm2 <- glm(Sediment_Change ~ Shoreline_End * Pin_Location * Log_Presence, data = sedpinchange[sedpinchange$Log_Presence != "reference",], family = 'gaussian')
+
+plot(glm2)
+
+summary(glm2)
+
+step(glm2) #AIC only measures the relative quality of models. The lower the AIC value the better, but only if the precision of your answer is not of the utmost importance. These AIC results suggest that shoreline and pin location have the biggest effect.
+
+#If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
+
+anova(glm2, test = "F") #the F test confirms the AIC results form above.
+
+```
+##Results:
+
+#A. Leverage cleared up
+
+#B. Only strong support for Shoreline End and Pin Location individually having a strong effect and no more trend for all three combined. This is good! Much easier to explain in thesis.
+
+
+#Further tests:
+```{r}
+emmeans(glm2, specs = pairwise ~ Shoreline_End:Pin_Location) ## I get output but I don't know how to interpret it.
+
+check_normality(glm2) ##look into this!
+
+check_heteroscedasticity(glm2)  ## when the standard deviations of a predicted variable, monitored over different values of an independent variable or as related to prior time periods, are non-constant.
+```
+

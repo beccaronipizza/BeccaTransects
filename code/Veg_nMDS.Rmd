@@ -1,0 +1,239 @@
+---
+title: "Veg nMDS"
+author: "Becca Morris"
+date: "2024-02-06"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(vegan)
+
+
+
+setwd("~/GitHub/BeccaTransects/data")
+
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data")
+```
+
+# 1. creating the main data frame:
+```{r}
+
+VegDataNew <- vegdata %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus','Taraxacum', 'Coytote_Bush','BoMa'), as.numeric) %>% 
+  mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters,    -Patch_Type) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_veg is simply what is remaining after subtracting the bare ground
+  mutate(across(SpFo:Total_Veg, ~ .x*4)) %>% 
+  mutate(Date = paste0(Year, "-", Month)) %>% 
+  mutate(Total_Veg2 = rowSums(across(SpFo:LeTr))) %>% 
+  filter(!Total_Veg2 == 0) 
+
+VegDataMerged <- full_join(VegDataNew, vegmetadata, by = "Transect_ID") %>% 
+  select(-c(...9:...12)) %>% 
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% 
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0)))
+ 
+
+
+
+```
+
+#2. Now I need to seperate my data into two df's for EACH ZONE -- one for identifiers and one for abundance data only.
+# *We removed the row where C6-L174 is equal to quadrat 3 and zone U since it was a big outlier.
+```{r}
+VegDataID_U <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "U" &
+                             !(VegDataMerged$Transect_ID == "C6-L174" & VegDataMerged$Quadrat == 3 &   VegDataMerged$Zone == "U"),
+                           c('Transect_ID', 'Distance_meters', 'Quadrat', 'Zone', 'Date', 'Shoreline_End', 'Log_Presence')]
+
+
+
+VegDataSpecies_U <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "U" &
+                                  !(VegDataMerged$Transect_ID == "C6-L174" & 
+                                      VegDataMerged$Quadrat == 3)), 
+                                c(7:37, 50:52)] %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) #'CaMa', 'Lolium', 'RaSa', 'FrSa', 'Fabiaceae', 'Ranunculus', 'Taraxacum'))
+
+
+
+#Transform the veg communities using the hellinger transformation.This transformation is useful for abundance data when you may have a few really abundant species and many rare species.It transforms the abundances of the really abundant and few rare species don't have less of an influence on the ordination. hellinger: square root of method = "total" (Legendre & Gallagher 2001).
+
+VegDataSpecies.hel_U <- decostand(VegDataSpecies_U, method = "hellinger")
+
+
+```
+
+```{r}
+VegDataID_M <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "M",
+                             #!(VegDataMerged$Transect_ID == "C6-L174" & VegDataMerged$Quadrat == 3 & VegDataMerged$Zone == "U"),
+                           c('Transect_ID', 'Distance_meters', 'Quadrat', 'Zone', 'Date', 'Shoreline_End', 'Log_Presence')]
+
+
+VegDataSpecies_M <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "M",
+                                  #!(VegDataMerged$Transect_ID == "C6-L174" & 
+                                      #VegDataMerged$Quadrat == 3)),
+                                c(7:37)] %>% 
+  select(-c('CaMa', 'Lolium', 'RaSa', 'FrSa', 'Fabiaceae', 'Ranunculus', 'Taraxacum'))
+```
+
+```{r}
+VegDataID_L <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "L",
+                             #!(VegDataMerged$Transect_ID == "C6-L174" & VegDataMerged$Quadrat == 3 & VegDataMerged$Zone == "U"),
+                           c('Transect_ID', 'Distance_meters', 'Quadrat', 'Zone', 'Date', 'Shoreline_End', 'Log_Presence')]
+
+
+VegDataSpecies_L <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "L",
+                                  #!(VegDataMerged$Transect_ID == "C6-L174" & 
+                                      #VegDataMerged$Quadrat == 3)),
+                                c(7:37)] %>% 
+  select(-c('CaMa', 'Lolium', 'RaSa', 'FrSa', 'Fabiaceae', 'Ranunculus', 'Taraxacum'))
+```
+
+# Per Margot: Run the nMDS. This is where I previously had an extra step, which I removed. You can play with the value of k, which is the number of dimensions. #2 is best but if you increase dimensions to 3 you decrease stress, which might be necessary for high values.
+#Stress: 0-0.1 = excellent fit, 0.1 – 0.2 = good fit, 0.2 – 0.3 = very mediocre fit, 0.3+ = trash
+#The default is trymax = 20. This is often not enough to achieve convergence, so I often increase this value
+#I generally don’t increase it past 10,000 – anything more than that and your data is not going to work with the analysis, or you need to mess with k
+# *** If they are all hashtagged out it is to preserve the last run of the MDS. Everything is all good.
+```{r}
+### UPPER NMDS ###
+set.seed(19840217)
+#VegDataSpeciesNMDS_U <- metaMDS(VegDataSpecies_U, k = 2, trymax = 20)
+VegDataSpeciesNMDS_U 
+
+#VegDataSpeciesNMDS_U  <- metaMDS(VegDataSpecies_U, previous.best = VegDataSpeciesNMDS_U)
+
+
+
+
+### Hellinger Method ###
+
+nmds_U <- metaMDS(VegDataSpecies.hel_U, autotransform = F, k = 2, trymax = 20) #autotransform = F so that it doesn't revert back to the default transformation *bc we are using the hellinger method.
+nmds_U
+
+save(nmds_U, file ="../output_data/nmds_U.Rds")
+
+load("output_data/nmds_U.RData")
+```
+
+```{r}
+### MIDDLE NMDS ###
+set.seed(19840217)
+#VegDataSpeciesNMDS_M <- metaMDS(VegDataSpecies_M, k = 2, trymax = 20)
+#VegDataSpeciesNMDS_M 
+
+#VegDataSpeciesNMDS_M  <- metaMDS(VegDataSpecies_M, previous.best = VegDataSpeciesNMDS_U)
+```
+
+```{r}
+### LOWER NMDS ###
+set.seed(19840217)
+#VegDataSpeciesNMDS_L <- metaMDS(VegDataSpecies_L, k = 2, trymax = 20)
+#VegDataSpeciesNMDS_L 
+
+#VegDataSpeciesNMDS_L  <- metaMDS(VegDataSpecies_L, previous.best = VegDataSpeciesNMDS_U)
+```
+
+
+### Plotting ###
+
+#Starting with Upper Zone:
+```{r}
+#Base R plotting:
+stressplot(VegDataSpeciesNMDS_U)
+
+plot(VegDataSpeciesNMDS_U)
+
+
+#ggplot:
+Axis1 <- as.numeric(as.character(VegDataSpeciesNMDS_U$points[,1]))
+
+Axis2 <- as.numeric(as.character(VegDataSpeciesNMDS_U$points[,2]))
+
+mds.coords1_U <- data.frame(VegDataID_U, Axis1, Axis2)
+
+ggplot() +
+  geom_point(data = mds.coords1_U, aes(x=Axis1, y=Axis2, 
+                                       color = Log_Presence,
+                                       shape = Shoreline_End)) +
+               labs(title = "Upper Zone nMDS") +
+               theme_bw()
+
+
+###  Plotting Hellinger method in base R ###
+
+ordiplot(nmds_U)
+ordiplot(nmds_U, type = "t") #puts species name on plot
+
+# using ggplot with Hellinger Method ###
+
+Axis1 <- as.numeric(as.character(nmds_U$points[,1]))
+
+Axis2 <- as.numeric(as.character(nmds_U$points[,2]))
+
+mds.coords1_U <- data.frame(VegDataID_U, Axis1, Axis2)
+
+
+ggplot() +
+  geom_point(data = mds.coords1_U, aes(x=Axis1, y=Axis2, 
+                                       color = Log_Presence,
+                                       shape = Shoreline_End)) +
+               labs(title = "Upper Zone nMDS") +
+               theme_bw() 
+
+
+```
+#Middle Zone
+```{r}
+#Base R plotting:
+stressplot(VegDataSpeciesNMDS_M)
+
+plot(VegDataSpeciesNMDS_M)
+
+
+#ggplot:
+Axis1 <- as.numeric(as.character(VegDataSpeciesNMDS_M$points[,1]))
+
+Axis2 <- as.numeric(as.character(VegDataSpeciesNMDS_M$points[,2]))
+
+mds.coords1_M <- data.frame(VegDataID_M, Axis1, Axis2)
+
+ggplot() +
+  geom_point(data = mds.coords1_M, aes(x=Axis1, y=Axis2, 
+                                       color = Log_Presence,
+                                       shape = Shoreline_End)) +
+               labs(title = "Middle Zone nMDS") +
+               theme_bw()
+```
+#Lower Zone:
+```{r}
+#Base R plotting:
+stressplot(VegDataSpeciesNMDS_L)
+
+plot(VegDataSpeciesNMDS_L)
+
+
+#Margot way:
+Axis1 <- as.numeric(as.character(VegDataSpeciesNMDS_L$points[,1]))
+
+Axis2 <- as.numeric(as.character(VegDataSpeciesNMDS_L$points[,2]))
+
+mds.coords1_L <- data.frame(VegDataID_L, Axis1, Axis2)
+
+ggplot() +
+  geom_point(data = mds.coords1_L, aes(x=Axis1, y=Axis2, 
+                                       color = Log_Presence,
+                                       shape = Shoreline_End)) +
+               labs(title = "Lower Zone nMDS") +
+               theme_bw()
+```
+

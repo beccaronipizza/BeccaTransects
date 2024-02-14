@@ -1,0 +1,221 @@
+---
+title: "Thesis-Vegetation Transects"
+output: html_notebook
+---
+
+RUN! Check that you're using the most updated data sheet and if not, update it in the folder listed below!
+```{r}
+setwd("/Users/bmorr/OneDrive/Documents/Sears Point Project/R/Thesis")
+getwd()
+```
+Set R up to import excel files with multiple sheets -- install package xlsx
+```{r Run}
+install.packages("readxl") 
+library("readxl")
+library("tidyverse")
+library("dplyr")
+library("ggplot2")
+library("hrbrthemes")
+```
+We have a function in R called read_excel() which we will use to import specific sheet into R. If no argument is specified, then the read_excel() will by default import the first Excel sheet.
+
+RUN!  Cheatsheet: https://github.com/rstudio/cheatsheets/blob/main/data-import.pdf
+```{r RUN}
+vegdata <- read_excel("VegData.xlsx")
+```
+
+RUN! Time to clean up the data:
+First, BoMa and other columns read as "logical". Set to numeric:
+```{r}
+#one at a time
+vegdata$BoMa <- as.numeric(vegdata$BoMa)
+#multiple at a time
+vegdata <- vegdata %>% 
+  mutate_at(c('1_MeIn', '2_DiGr', '4_RaSa', '5_CaMa', '6_SaSo', '7_Lolium', '9_FrSa', '15_Fabiaceae','20_Vicia', '21_Sonc', '22_Xant', '23_LeTr', 'Coytote_Bush'), as.numeric)
+
+head(vegdata)
+str(vegdata)
+
+vegdata <- vegdata %>% add_column("Date"=paste0(vegdata$Month, "_", vegdata$Year))
+
+
+```
+
+!Convert decimal values for percent values for the Percent_Spartina:Percent_Bare_ground columns:
+```{r DON'T NEED!}
+install.packages("scales")                                   
+library("scales")
+
+vegdata$Percent_Spartina <- scales::percent(vegdata$Percent_Spartina)
+vegdata$Percent_Pickleweed <- scales::percent(vegdata$Percent_Pickleweed)
+vegdata$Percent_Upland <- scales::percent(vegdata$Percent_Upland)
+vegdata$Percent_Bare_Ground <- scales::percent(vegdata$Percent_Bare_Ground)
+```
+
+#From Margot Lessons - Session4_BeccaVegTransect: Remove BaGr Types 1 and 2 and coytote Bush. Since we aren't differentiating bw the two bare ground types we should just combine those two columns into one new column and then remove them:
+```{r Do we need to do??!}
+vegdata <- vegdata %>%
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) 
+  
+```
+
+
+!Create a data frame using a small chunk of the data:
+```{r DON'T RUN!}
+testdata1 <- data.frame(
+  Date = rep("February 2023", 11),
+  Transect_ID = c("C1-REF1", "C1-REF1", "C1-REF1", "C1-REF1", "C1-REF1", "C1-REF1",
+    "C1-REF1", "C1-REF1", "C1-REF1", "C1-REF1", "C1-REF1"),
+  Distance_meters = c(0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14),
+  Quadrat = 1:11,
+  Zone = c("U", "U", "U", "M", "M", "M", "L", "L", "L", "L", "L"),
+  Percent_Spartina = c(
+    "0%", "0%", "0%", "0%", "0%", "0%", "0%", "0%", "0%", "0%", "40%"),
+  Percent_Pickleweed = c(
+    "48%", "88%", "92%", "56%", "80%", "40%", "16%", "100%", "100%", "0%", "32%"),
+  Percent_Upland = c(
+    "96%", "100%", "12%", "92%", "0%", "0%", "0%", "0%", "0%", "0%", "0%")) %>%
+  
+#Need to change percent to a numerical value!!! Are these percentages right? They represent a percentage of 25 quadrats. In Margot lessons we multiply by 4 bc 15 is 1/4 of 100.
+as.numeric(sub("%","",))/100
+
+
+# Assuming your data frame is called 'data'
+
+
+testdata1$Dominant_Type <- apply(testdata1[, c("Percent_Spartina", "Percent_Pickleweed", "Percent_Upland")], 1, function(x) {
+  types <- c("Percent_Spartina", "Percent_Pickleweed", "Percent_Upland")
+  Dominant_Type <- types[which.max(x)]
+  return(Dominant_Type)
+})
+
+```
+!Giving plotting a try! 
+```{r DON'T RUN}
+ggplot(testdata1, aes(x = Distance_meters,y = Transect_ID, fill = Percent_Pickleweed)) +
+  geom_tile() +
+  theme_bw() +
+  labs(x = "Distance (meters)", y = "Transect ID", fill = "Percent_Pickleweed") +
+  theme(legend.position = "bottom")
+```
+```{r DON'T RUN}
+testdata1 %>%
+ggplot(aes(x = Distance_meters,y = Transect_ID,
+          group = Quadrat,
+          color = Veg_Community)) +
+  geom_line() 
+```
+
+!Create a dataframe with all of the data:
+```{r  DON'T RUN}
+testdata2 <- vegdata %>%
+  select(Month, Year, Transect_ID, Distance_meters, Percent_Spartina, Percent_Pickleweed, Percent_Upland) %>%
+  pivot_longer(cols = Percent_Spartina:Percent_Upland,
+                names_to = "Veg_Community",
+                values_to = "Percent_cover") %>% 
+  group_by(Transect_ID, Month, Year, Distance_meters) %>%
+  mutate(Month = factor(Month, levels = c("February", "April", "June", "July", "August", "September", "October")),
+           Year = factor(Year, levels = c("2022", "2023"))) 
+   
+
+testdata2$Dominant_Type <- apply(testdata2[, c("Percent_Spartina", "Percent_Pickleweed", "Percent_Upland")], 1, function(x) {
+  types <- c("Percent_Spartina", "Percent_Pickleweed", "Percent_Upland")
+  Dominant_Type <- types[which.max(x)]
+  return(Dominant_Type)
+})
+
+  
+  testdata2 %>%
+ggplot(aes(x = Distance_meters,y = Month,
+          group = Month,
+          color = Veg_Community)) +
+  geom_line() 
+```
+
+
+
+
+RUN THIS OR THE CHUNK BELOW! BOTH NOT NECESARY.  Same way as chunk below but using for loops:
+```{r}
+vegdata<-data.frame(vegdata)
+str(vegdata)
+
+#confirming that the loop is working on the data you want it to
+for (i in 1:nrow(vegdata)) {print(i)
+}
+
+for (i in 1:nrow(vegdata)) {max(vegdata$Percent_Spartina[i], vegdata$Percent_Pickleweed[i], vegdata$Percent_Upland[i])
+}
+
+vegdata$Dominant_Community <- max(vegdata$Percent_Spartina[i], vegdata$Percent_Pickleweed[i], vegdata$Percent_Upland[i], vegdata$Percent_Bare_Ground[i])
+
+vegdata$Dominant_Community <- NA
+vegdata$Dominant_Community <- as.numeric("NULL")
+
+for (i in 1:nrow(vegdata)) {
+  vegdata$Dominant_Community [i] <- max(vegdata$Percent_Spartina[i], vegdata$Percent_Pickleweed[i], vegdata$Percent_Upland[i], vegdata$Percent_Bare_Ground[i])
+}
+
+```
+
+Same way as above but using Tidyverse:
+```{r}
+vegdata %>% 
+  mutate(Dom_Community_ID = case_when(Dominant_Community == Percent_Spartina ~ "Spartina", 
+                                      Dominant_Community == Percent_Pickleweed ~ "Pickleweed",
+                                      Dominant_Community == Percent_Upland ~ "Upland",
+                                      Dominant_Community == Percent_Bare_Ground ~ "Bare_ground"))
+
+
+select(Transect_ID,Date, Quadrat, Percent_Spartina:Percent_Upland, Percent_Bare_Ground) %>% 
+  pivot_longer(cols = -c("Transect_ID", "Date", "Quadrat"), names_to = "Dominant_Community")  %>% 
+  mutate(Dominant_Community = str_remove(Dominant_Community, "Percent_")) %>% 
+  group_by(Transect_ID, Date, Quadrat) %>% 
+  summarise(Percent_Cover = max(value, na.rm=TRUE), Dominant_Community = Dominant_Community) %>% 
+            
+  
+```
+
+
+
+Now I want to make a new data frame that only has the columns I need for these plots:
+```{r}
+stuartplots <- vegdata %>% 
+   select(-SpFo:-X23_LeTr)
+```
+
+Start working with the data for lollipop charts from here: https://r-graph-gallery.com/303-lollipop-plot-with-2-values.html
+```{r}
+#here's the provided code:
+
+ggplot(data) +
+  geom_segment( aes(x=x, xend=x, y=value1, yend=value2), color="grey") +
+  geom_point( aes(x=x, y=value1), color=rgb(0.2,0.7,0.1,0.5), size=3 ) +
+  geom_point( aes(x=x, y=value2), color=rgb(0.7,0.2,0.1,0.5), size=3 ) +
+  coord_flip()+
+  theme_ipsum() +
+  theme(
+    legend.position = "none",
+  ) +
+  xlab("") +
+  ylab("Value of Y")
+
+#my attempt:
+
+ggplot(stuartplots) +
+  geom_segment(aes(x= Distance_meters, xend=Distance_meters, y=Transect_ID, yend=Transect_ID), color="black") +
+  geom_segment(aes(x= Distance_meters, xend=Distance_meters, y=Transect_ID, yend=Transect_ID), color="black") +
+  xlab("Distance Along Transect") +
+  ylab("Transect_ID")
+
+```
+
+
+
+
+
+
+
+
