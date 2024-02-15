@@ -207,7 +207,6 @@ ordiplot(nmds_U)
 ordiplot(nmds_U, type = "t") #puts species name on plot
 
 
-
 # using ggplot with Hellinger Method ###
 
 NMDS1 <- as.numeric(as.character(nmds_U$points[,1]))
@@ -350,7 +349,8 @@ p3 <- ggplot() +
              aes(x=NMDS1, y=NMDS2, 
                 color = Log_Presence,
                 shape = Shoreline_End),
-             alpha = 0.5) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
+             alpha = 0.5,
+             size = 4) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
   scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p1 and p2
   #labs(title = "Upper Zone nMDS",
@@ -542,7 +542,8 @@ p3 <- ggplot() +
              aes(x=NMDS1, y=NMDS2, 
                 color = Log_Presence,
                 shape = Shoreline_End),
-             alpha = 0.5) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
+             alpha = 0.5,
+             size = 4) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
   scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p1 and p2
   scale_x_continuous(limits = c(-1, 1)) +
@@ -723,7 +724,8 @@ p3 <- ggplot() +
              aes(x=NMDS1, y=NMDS2, 
                 color = Log_Presence,
                 shape = Shoreline_End),
-             alpha = 0.5) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
+             alpha = 0.5,
+             size = 4) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
   scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p1 and p2
   scale_x_continuous(limits = c(-1, 1)) +
