@@ -12,8 +12,19 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 library(vegan)
+#everything below is to install the latest version of ggvegan for plotting the nmds
+if (!require(devtools)) {           
+  install.packages("devtools")
+}
+devtools::install_github("gavinsimpson/ggvegan")
 
+library(ggvegan)
 
+#everything below is to install the latest version of ggpubr for plotting the nmds
+if(!require(devtools)) install.packages("devtools")
+devtools::install_github("kassambara/ggpubr")
+
+library(ggpubr)
 
 setwd("~/GitHub/BeccaTransects/data")
 
@@ -73,6 +84,7 @@ VegDataSpecies.hel_U <- decostand(VegDataSpecies_U, method = "hellinger")
 
 ```
 
+
 ```{r}
 VegDataID_M <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "M",
                              #!(VegDataMerged$Transect_ID == "C6-L174" & VegDataMerged$Quadrat == 3 & VegDataMerged$Zone == "U"),
@@ -82,8 +94,12 @@ VegDataID_M <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged
 VegDataSpecies_M <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "M",
                                   #!(VegDataMerged$Transect_ID == "C6-L174" & 
                                       #VegDataMerged$Quadrat == 3)),
-                                c(7:37)] %>% 
-  select(-c('CaMa', 'Lolium', 'RaSa', 'FrSa', 'Fabiaceae', 'Ranunculus', 'Taraxacum'))
+                                c(7:37, 50:52)] %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
+
+#Transform the veg communities using the hellinger transformation.This transformation is useful for abundance data when you may have a few really abundant species and many rare species.It transforms the abundances of the really abundant and few rare species don't have less of an influence on the ordination. hellinger: square root of method = "total" (Legendre & Gallagher 2001).
+
+VegDataSpecies.hel_M <- decostand(VegDataSpecies_M, method = "hellinger")
 ```
 
 ```{r}
@@ -95,9 +111,18 @@ VegDataID_L <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged
 VegDataSpecies_L <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "L",
                                   #!(VegDataMerged$Transect_ID == "C6-L174" & 
                                       #VegDataMerged$Quadrat == 3)),
-                                c(7:37)] %>% 
-  select(-c('CaMa', 'Lolium', 'RaSa', 'FrSa', 'Fabiaceae', 'Ranunculus', 'Taraxacum'))
+                                c(7:37, 50:52)] %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
+
+#Transform the veg communities using the hellinger transformation.This transformation is useful for abundance data when you may have a few really abundant species and many rare species.It transforms the abundances of the really abundant and few rare species don't have less of an influence on the ordination. hellinger: square root of method = "total" (Legendre & Gallagher 2001).
+
+VegDataSpecies.hel_L <- decostand(VegDataSpecies_L, method = "hellinger")
 ```
+
+
+
+#3. Running the NMDS:
+
 
 # Per Margot: Run the nMDS. This is where I previously had an extra step, which I removed. You can play with the value of k, which is the number of dimensions. #2 is best but if you increase dimensions to 3 you decrease stress, which might be necessary for high values.
 #Stress: 0-0.1 = excellent fit, 0.1 – 0.2 = good fit, 0.2 – 0.3 = very mediocre fit, 0.3+ = trash
@@ -108,7 +133,7 @@ VegDataSpecies_L <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataM
 ### UPPER NMDS ###
 set.seed(19840217)
 #VegDataSpeciesNMDS_U <- metaMDS(VegDataSpecies_U, k = 2, trymax = 20)
-VegDataSpeciesNMDS_U 
+#VegDataSpeciesNMDS_U 
 
 #VegDataSpeciesNMDS_U  <- metaMDS(VegDataSpecies_U, previous.best = VegDataSpeciesNMDS_U)
 
@@ -132,6 +157,18 @@ set.seed(19840217)
 #VegDataSpeciesNMDS_M 
 
 #VegDataSpeciesNMDS_M  <- metaMDS(VegDataSpecies_M, previous.best = VegDataSpeciesNMDS_U)
+
+
+
+
+## Hellinger Method ###
+
+nmds_M <- metaMDS(VegDataSpecies.hel_M, autotransform = F, k = 2, trymax = 100) #autotransform = F so that it doesn't revert back to the default transformation *bc we are using the hellinger method.
+nmds_M
+
+save(nmds_M, file ="../output_data/nmds_M.Rds")
+
+load("output_data/nmds_M.RData")
 ```
 
 ```{r}
@@ -141,99 +178,576 @@ set.seed(19840217)
 #VegDataSpeciesNMDS_L 
 
 #VegDataSpeciesNMDS_L  <- metaMDS(VegDataSpecies_L, previous.best = VegDataSpeciesNMDS_U)
+
+
+
+
+## Hellinger Method ###
+
+nmds_L <- metaMDS(VegDataSpecies.hel_L, autotransform = F, k = 2, trymax = 100) #autotransform = F so that it doesn't revert back to the default transformation *bc we are using the hellinger method.
+nmds_L
+
+save(nmds_L, file ="../output_data/nmds_L.Rds")
+
+load("output_data/nmds_L.RData")
 ```
 
 
-### Plotting ###
+
+
+
+#4. Plotting 
+
 
 #Starting with Upper Zone:
 ```{r}
-#Base R plotting:
-stressplot(VegDataSpeciesNMDS_U)
-
-plot(VegDataSpeciesNMDS_U)
-
-
-#ggplot:
-Axis1 <- as.numeric(as.character(VegDataSpeciesNMDS_U$points[,1]))
-
-Axis2 <- as.numeric(as.character(VegDataSpeciesNMDS_U$points[,2]))
-
-mds.coords1_U <- data.frame(VegDataID_U, Axis1, Axis2)
-
-ggplot() +
-  geom_point(data = mds.coords1_U, aes(x=Axis1, y=Axis2, 
-                                       color = Log_Presence,
-                                       shape = Shoreline_End)) +
-               labs(title = "Upper Zone nMDS") +
-               theme_bw()
-
-
 ###  Plotting Hellinger method in base R ###
 
 ordiplot(nmds_U)
 ordiplot(nmds_U, type = "t") #puts species name on plot
 
+
+
 # using ggplot with Hellinger Method ###
 
-Axis1 <- as.numeric(as.character(nmds_U$points[,1]))
+NMDS1 <- as.numeric(as.character(nmds_U$points[,1]))
+NMDS2 <- as.numeric(as.character(nmds_U$points[,2]))
+mds.coords1_U <- data.frame(VegDataID_U, NMDS1, NMDS2)
 
-Axis2 <- as.numeric(as.character(nmds_U$points[,2]))
+cbp <- c("#009E73", "#D55E00", "#CC79A7","#56B4E9", "#F0E442" , "#E69F00", "#000000", "#0072B2")
 
-mds.coords1_U <- data.frame(VegDataID_U, Axis1, Axis2)
 
+EWLNLplot <- ggplot() +
+  geom_point(data = mds.coords1_U, aes(x=NMDS1, y=NMDS2, 
+                                       color = Log_Presence,
+                                       shape = Shoreline_End,
+                                       alpha = 0.8)) +
+  scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
+  #geom_segment(data = (mds.coords1_U),
+  #             mapping = aes(x =0, y = 0, xend = NMDS1, yend = NMDS2),
+  #             arrow = arrow(length = unit(0.015, "npc"),
+  #                           type ="closed"),
+  #             color = "darkgray",
+  #            alpha = 0.5,
+  #             size = 0.6) +
+               labs(title = "Upper Zone nMDS",
+                    subtitle = "stress = 0.10, bray") +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  labs(title = "Upper Zone nMDS") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(color = "black"))
+
+EWLNLplot
+
+
+
+##experimenting with getting species names on ggplot using Hellinger method.  Has species names but not E v. W or L v. NL info:
+
+fort <- fortify(nmds_U) #allow the data contained within objects created by vegan to be converted into a format suitable for use with ggplot directly.
 
 ggplot() +
-  geom_point(data = mds.coords1_U, aes(x=Axis1, y=Axis2, 
-                                       color = Log_Presence,
-                                       shape = Shoreline_End)) +
-               labs(title = "Upper Zone nMDS") +
-               theme_bw() 
+  geom_point(data = subset(fort, score == 'sites'),
+             mapping = aes(x=NMDS1, y=NMDS2),
+             color = "#D55E00",
+             alpha = 0.5) +
+  geom_segment(data = subset(fort, score == 'species'),
+               mapping = aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.015, "npc"),
+                             type ="closed"),
+               color = "darkgray",
+               size = 0.6) +
+               labs(title = "Upper Zone nMDS",
+                    subtitle = "stress = 0.100779, bray") +
+               theme_bw() +
+  geom_text(data = subset(fort, score == 'species'),
+            mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(color = "black"))
+
+# Interpretation: The points, or "sites" that were sampled by the nmds, that are > 0 on the x-axis were characterized by higher abundances of those species
+# that have positive values along the x-axis. Conversely,the sites with negative values have low abundances of the species listed < 0.
+
+
+
+
+
+#Making a two panel plot:
+
+#points only.  NO arrows:
+p1 <- ggplot() +
+  geom_point(data = subset(fort, score == 'sites'),
+             mapping = aes(x=NMDS1, y=NMDS2),
+             color = "#D55E00",
+             alpha = 0.5) +
+  geom_segment(data = subset(fort, score == 'species'),
+               mapping = aes(x =0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.015, "npc"),
+                             type ="closed"),
+               color = "darkgray",
+               size = 0,     #set size and alpha = 0 so that the arrows are scaled the same as p2 but they don't actually show up.
+               alpha = 0) +
+  geom_text(data = subset(fort, score == 'species'),
+            mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1),
+            alpha = 0) +     #also set alpha = o here, too.
+  scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p2
+  labs(title = "Upper Zone nMDS",
+       subtitle = "stress = 0.100779, bray") +
+  theme_bw() +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face = "bold", size = 16),
+        axis.title.x = element_blank(),    #remove the x-axis title
+        axis.line = element_line(color = "black")) 
+
+p1   #points, but no species labels or arrows
+
+
+p2 <- ggplot() +
+  geom_point(data = subset(fort, score == 'sites'),
+             mapping = aes(x=NMDS1, y=NMDS2),
+             color = "#D55E00",
+             alpha = 0) +     #set alpha = 0 here so that the points are fully transparent.
+  geom_segment(data = subset(fort, score == 'species'),
+               mapping = aes(x =0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.015, "npc"),
+                             type ="closed"),
+               color = "darkgray",
+               size = 0.6) +
+               #labs(title = "Upper Zone nMDS",
+                #    subtitle = "stress = 0.10, bray") +
+               theme_bw() +
+  geom_text(data = subset(fort, score == 'species'),
+            mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
+  scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p1
+  labs(title = "Upper Zone nMDS",
+       subtitle = "stress = 0.100779, bray") +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face = "bold", size = 16),
+        axis.title.x = element_blank(),    #remove the x-axis title
+        axis.line = element_line(color = "black"))
+p2   #species and arrow, but no points
+
+
+
+#p3 below uses the data from EWLNLplot above with a few modifications
+p3 <- ggplot() +
+  geom_point(data = mds.coords1_U, 
+             aes(x=NMDS1, y=NMDS2, 
+                color = Log_Presence,
+                shape = Shoreline_End),
+             alpha = 0.5) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
+  scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
+  scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p1 and p2
+  #labs(title = "Upper Zone nMDS",
+  #    subtitle = "stress = 0.100779, bray") +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(color = "black"),
+        legend.position = "bottom", # move legend to bottom
+        legend.title = element_text(face = "bold", size=10),
+        legend.text=element_text(size=8)) 
+
+p3
+
+
+#Now plot:
+ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
+          common.legend = TRUE,
+          legend = "bottom")
+```
+#Test for differences in the veg community composition across shoreline end and log v no log.
+```{r}
+#First, need to remove these previous columns that were combined back in the beginning and remove the weirdo in quad 3 for C6-L174:
+VegDataMerged_mod_U <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "U" &
+                                  !(VegDataMerged$Transect_ID == "C6-L174" & 
+                                      VegDataMerged$Quadrat == 3)), ] %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
+
+### Not sure if I can run this or not!!!
+adonis2(Total_Veg ~ Shoreline_End, data=VegDataMerged_mod_U)
 
 
 ```
+
+
 #Middle Zone
 ```{r}
-#Base R plotting:
-stressplot(VegDataSpeciesNMDS_M)
+###  Plotting Hellinger method in base R ###
 
-plot(VegDataSpeciesNMDS_M)
+ordiplot(nmds_M)
+ordiplot(nmds_M, type = "t") #puts species name on plot
 
 
-#ggplot:
-Axis1 <- as.numeric(as.character(VegDataSpeciesNMDS_M$points[,1]))
 
-Axis2 <- as.numeric(as.character(VegDataSpeciesNMDS_M$points[,2]))
+# using ggplot with Hellinger Method ###
 
-mds.coords1_M <- data.frame(VegDataID_M, Axis1, Axis2)
+NMDS1 <- as.numeric(as.character(nmds_M$points[,1]))
+NMDS2 <- as.numeric(as.character(nmds_M$points[,2]))
+mds.coords1_M <- data.frame(VegDataID_M, NMDS1, NMDS2)
+
+cbp <- c("#009E73", "#D55E00", "#CC79A7","#56B4E9", "#F0E442" , "#E69F00", "#000000", "#0072B2")
+
+
+EWLNL_M_plot <- ggplot() +
+  geom_point(data = mds.coords1_M, aes(x=NMDS1, y=NMDS2, 
+                                       color = Log_Presence,
+                                       shape = Shoreline_End,
+                                       alpha = 0.8)) +
+  scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
+  #geom_segment(data = (mds.coords1_U),
+  #             mapping = aes(x =0, y = 0, xend = NMDS1, yend = NMDS2),
+  #             arrow = arrow(length = unit(0.015, "npc"),
+  #                           type ="closed"),
+  #             color = "darkgray",
+  #            alpha = 0.5,
+  #             size = 0.6) +
+               labs(title = "Middle Zone nMDS",
+                    subtitle = "stress = 0.07531825, bray") +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  labs(title = "Middle Zone nMDS") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(color = "black"))
+
+EWLNL_M_plot
+
+
+
+##experimenting with getting species names on ggplot using Hellinger method.  Has species names but not E v. W or L v. NL info:
+
+fort <- fortify(nmds_M) #allow the data contained within objects created by vegan to be converted into a format suitable for use with ggplot directly. If it says "data` must be a <data.frame>, or an object coercible by `fortify()`, not a <metaMDS/monoMDS> object," reload ggvegan package.
 
 ggplot() +
-  geom_point(data = mds.coords1_M, aes(x=Axis1, y=Axis2, 
-                                       color = Log_Presence,
-                                       shape = Shoreline_End)) +
-               labs(title = "Middle Zone nMDS") +
-               theme_bw()
+  geom_point(data = subset(fort, score == 'sites'),
+             mapping = aes(x=NMDS1, y=NMDS2),
+             color = "#D55E00",
+             alpha = 0.5) +
+  geom_segment(data = subset(fort, score == 'species'),
+               mapping = aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.015, "npc"),
+                             type ="closed"),
+               color = "darkgray",
+               size = 0.6) +
+               labs(title = "Middle Zone nMDS",
+                    subtitle = "stress = 0.07531825, bray") +
+               theme_bw() +
+  geom_text(data = subset(fort, score == 'species'),
+            mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(color = "black"))
+
+# Interpretation: The points, or "sites" that were sampled by the nmds, that are > 0 on the x-axis were characterized by higher abundances of those species
+# that have positive values along the x-axis. Conversely,the sites with negative values have low abundances of the species listed < 0.
+
+
+
+
+
+#Making a two panel plot:
+
+#points only.  NO arrows:
+p1 <- ggplot() +
+  geom_point(data = subset(fort, score == 'sites'),
+             mapping = aes(x=NMDS1, y=NMDS2),
+             color = "#D55E00",
+             alpha = 0.5) +
+  geom_segment(data = subset(fort, score == 'species'),
+               mapping = aes(x =0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.015, "npc"),
+                             type ="closed"),
+               color = "darkgray",
+               size = 0,     #set size and alpha = 0 so that the arrows are scaled the same as p2 but they don't actually show up.
+               alpha = 0) +
+  geom_text(data = subset(fort, score == 'species'),
+            mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1),
+            alpha = 0) +     #also set alpha = o here, too.
+  scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p2
+  labs(title = "Middle Zone nMDS",
+       subtitle = "stress = 0.07531825, bray") +
+  theme_bw() +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face = "bold", size = 16),
+        axis.title.x = element_blank(),    #remove the x-axis title
+        axis.line = element_line(color = "black")) 
+
+p1   #points, but no species labels or arrows
+
+
+p2 <- ggplot() +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+   #putting these lines under the species labels
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  geom_point(data = subset(fort, score == 'sites'),
+             mapping = aes(x=NMDS1, y=NMDS2),
+             color = "#D55E00",
+             alpha = 0) +     #set alpha = 0 here so that the points are fully transparent.
+  geom_segment(data = subset(fort, score == 'species'),
+               mapping = aes(x =0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.015, "npc"),
+                             type ="closed"),
+               color = "darkgray",
+               size = 0.6) +
+               #labs(title = "Upper Zone nMDS",
+                #    subtitle = "stress = 0.10, bray") +
+               theme_bw() +
+  geom_text(data = subset(fort, score == 'species'),
+            mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
+  scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p1
+  scale_x_continuous(limits = c(-1, 1)) +
+  labs(title = "Middle Zone nMDS",
+       subtitle = "stress = 0.07531825, bray") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face = "bold", size = 16),
+        axis.title.x = element_blank(),    #remove the x-axis title
+        axis.line = element_line(color = "black"))
+p2   #species and arrow, but no points
+
+
+
+#p3 below uses the data from EWLNLplot above with a few modifications
+p3 <- ggplot() +
+  geom_point(data = mds.coords1_M, 
+             aes(x=NMDS1, y=NMDS2, 
+                color = Log_Presence,
+                shape = Shoreline_End),
+             alpha = 0.5) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
+  scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
+  scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p1 and p2
+  scale_x_continuous(limits = c(-1, 1)) +
+  #scale_x_(limits = -1, 1) +
+  #labs(title = "Upper Zone nMDS",
+  #    subtitle = "stress = 0.100779, bray") +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(color = "black"),
+        legend.position = "bottom", # move legend to bottom
+        legend.title = element_text(face = "bold", size=10),
+        legend.text=element_text(size=8)) 
+
+p3
+
+
+#Now plot:
+ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
+          common.legend = TRUE,
+          legend = "bottom")
 ```
+
+
 #Lower Zone:
 ```{r}
-#Base R plotting:
-stressplot(VegDataSpeciesNMDS_L)
+###  Plotting Hellinger method in base R ###
 
-plot(VegDataSpeciesNMDS_L)
+ordiplot(nmds_L)
+ordiplot(nmds_L, type = "t") #puts species name on plot
 
 
-#Margot way:
-Axis1 <- as.numeric(as.character(VegDataSpeciesNMDS_L$points[,1]))
 
-Axis2 <- as.numeric(as.character(VegDataSpeciesNMDS_L$points[,2]))
+# using ggplot with Hellinger Method ###
 
-mds.coords1_L <- data.frame(VegDataID_L, Axis1, Axis2)
+NMDS1 <- as.numeric(as.character(nmds_L$points[,1]))
+NMDS2 <- as.numeric(as.character(nmds_L$points[,2]))
+mds.coords1_L <- data.frame(VegDataID_L, NMDS1, NMDS2)
+
+cbp <- c("#009E73", "#D55E00", "#CC79A7","#56B4E9", "#F0E442" , "#E69F00", "#000000", "#0072B2")
+
+
+EWLNL_L_plot <- ggplot() +
+  geom_point(data = mds.coords1_L, aes(x=NMDS1, y=NMDS2, 
+                                       color = Log_Presence,
+                                       shape = Shoreline_End,
+                                       alpha = 0.8)) +
+  scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
+  #geom_segment(data = (mds.coords1_U),
+  #             mapping = aes(x =0, y = 0, xend = NMDS1, yend = NMDS2),
+  #             arrow = arrow(length = unit(0.015, "npc"),
+  #                           type ="closed"),
+  #             color = "darkgray",
+  #            alpha = 0.5,
+  #             size = 0.6) +
+  labs(title = "Lower Zone nMDS",
+  subtitle = "stress = 0.02575065 , bray") +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(color = "black"))
+
+EWLNL_L_plot
+
+
+
+##experimenting with getting species names on ggplot using Hellinger method.  Has species names but not E v. W or L v. NL info:
+
+fort <- fortify(nmds_L) #allow the data contained within objects created by vegan to be converted into a format suitable for use with ggplot directly. If it says "data` must be a <data.frame>, or an object coercible by `fortify()`, not a <metaMDS/monoMDS> object," reload ggvegan package.
 
 ggplot() +
-  geom_point(data = mds.coords1_L, aes(x=Axis1, y=Axis2, 
-                                       color = Log_Presence,
-                                       shape = Shoreline_End)) +
-               labs(title = "Lower Zone nMDS") +
-               theme_bw()
+  geom_point(data = subset(fort, score == 'sites'),
+             mapping = aes(x=NMDS1, y=NMDS2),
+             color = "#D55E00",
+             alpha = 0.5) +
+  geom_segment(data = subset(fort, score == 'species'),
+               mapping = aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.015, "npc"),
+                             type ="closed"),
+               color = "darkgray",
+               size = 0.6) +
+               labs(title = "Lower Zone nMDS",
+                    subtitle = "stress = 0.02575065, bray") +
+               theme_bw() +
+  geom_text(data = subset(fort, score == 'species'),
+            mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(color = "black"))
+
+# Interpretation: The points, or "sites" that were sampled by the nmds, that are > 0 on the x-axis were characterized by higher abundances of those species
+# that have positive values along the x-axis. Conversely,the sites with negative values have low abundances of the species listed < 0.
+
+
+
+
+
+#Making a two panel plot:
+
+#points only.  NO arrows:
+p1 <- ggplot() +
+  geom_point(data = subset(fort, score == 'sites'),
+             mapping = aes(x=NMDS1, y=NMDS2),
+             color = "#D55E00",
+             alpha = 0.5) +
+  geom_segment(data = subset(fort, score == 'species'),
+               mapping = aes(x =0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.015, "npc"),
+                             type ="closed"),
+               color = "darkgray",
+               size = 0,     #set size and alpha = 0 so that the arrows are scaled the same as p2 but they don't actually show up.
+               alpha = 0) +
+  geom_text(data = subset(fort, score == 'species'),
+            mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1),
+            alpha = 0) +     #also set alpha = o here, too.
+  scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p2
+  labs(title = "Lower Zone nMDS",
+       subtitle = "stress = 0.02575065, bray") +
+  theme_bw() +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face = "bold", size = 16),
+        axis.title.x = element_blank(),    #remove the x-axis title
+        axis.line = element_line(color = "black")) 
+
+p1   #points, but no species labels or arrows
+
+
+p2 <- ggplot() +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+   #putting these lines under the species labels
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  geom_point(data = subset(fort, score == 'sites'),
+             mapping = aes(x=NMDS1, y=NMDS2),
+             color = "#D55E00",
+             alpha = 0) +     #set alpha = 0 here so that the points are fully transparent.
+  geom_segment(data = subset(fort, score == 'species'),
+               mapping = aes(x =0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.015, "npc"),
+                             type ="closed"),
+               color = "darkgray",
+               size = 0.6) +
+               #labs(title = "Upper Zone nMDS",
+                #    subtitle = "stress = 0.10, bray") +
+               theme_bw() +
+  geom_text(data = subset(fort, score == 'species'),
+            mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
+  scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p1
+  scale_x_continuous(limits = c(-1, 1)) +
+  labs(title = "Lower Zone nMDS",
+       subtitle = "stress = 0.02575065, bray") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face = "bold", size = 16),
+        axis.title.x = element_blank(),    #remove the x-axis title
+        axis.line = element_line(color = "black"))
+p2   #species and arrow, but no points
+
+
+
+#p3 below uses the data from EWLNLplot above with a few modifications
+p3 <- ggplot() +
+  geom_point(data = mds.coords1_L, 
+             aes(x=NMDS1, y=NMDS2, 
+                color = Log_Presence,
+                shape = Shoreline_End),
+             alpha = 0.5) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
+  scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
+  scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p1 and p2
+  scale_x_continuous(limits = c(-1, 1)) +
+  #scale_x_(limits = -1, 1) +
+  #labs(title = "Upper Zone nMDS",
+  #    subtitle = "stress = 0.100779, bray") +
+  geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
+  geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
+  
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_line(color = "black"),
+        legend.position = "bottom", # move legend to bottom
+        legend.title = element_text(face = "bold", size=10),
+        legend.text=element_text(size=8)) 
+
+p3
+
+
+#Now plot:
+ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
+          common.legend = TRUE,
+          legend = "bottom")
 ```
 
