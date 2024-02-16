@@ -8,9 +8,9 @@ output: html_document
 ```{r setup, include=FALSE}
 library(readxl)
 library(tidyverse)
-library(dplyr)
-library(lme4)
-library(car)
+library(ggplot2)
+library(broom)
+library(AICcmodavg)
 library(glmmTMB)
 
 setwd("~/GitHub/BeccaTransects/data")
@@ -19,6 +19,7 @@ vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet 
 vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data")
 ```
 
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 # 1. creating the main data frame:
 ```{r}
 vegdata2 <- vegdata %>% 
@@ -30,11 +31,12 @@ vegdata2 <- vegdata %>%
   select(-BaGr_1, -BaGr_2) %>% 
   mutate(Total_Veg = 25-BaGr) %>%  #Total_veg is simply what is remaining after subtracting the bare ground
   mutate(across(SpFo:Total_Veg, ~ .x*4)) %>% 
-  mutate(Date = paste0(Year, "-", Month)) 
+  mutate(Date = paste0(Year, "-", Month)) %>% 
+  mutate(Total_Veg2 = rowSums(across(SpFo:LeTr))) %>% 
+  filter(!Total_Veg2 == 0) 
 ```
 
 #### Using Full_Join to combine main data sheet and metadata sheet ####
-
 
 # 2. First I want to clean up the metadata sheet:
 ```{r}
@@ -42,13 +44,80 @@ vegmetadata %>%
   select(Transect_ID, Shoreline_End, Log_Presence)
 ```
 
-# 3. Now to merge the two data frames together:
+# 3. Now to merge the two data frames together, combine pickleweed species into a single column, distirbute picklepups into SaPa and SaDe columns, combine grasses into one column, and remove the redunant columns:
 ```{r}
 vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>% 
-  select(-c(...9:...12))
+  select(-c(...9:...12)) %>% 
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% 
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
 ```
 
-#### Attempting a GLMM:
+# 4. Now to break the data up into the three zones. The middle zone contains logs, so I'll need to make the log location's NA's:
+
+# Upper Zone:
+```{r}
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U"),]
+```
+# Middle Zone:
+```{r}
+vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M"),]
+```
+# Lower Zone:
+```{r}
+vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L"),]
+```
+
+
+
+#!!!!!!!!!!!!!!!!!!!!!!#
+# 5. Test for normality:
+
+# Upper Zone Normality:
+```{r}
+#QQ-Plot:
+qqnorm(vegdata_U$Total_Veg, pch = 1, frame = FALSE)
+qqline(vegdata_U$Total_Veg, col = "steelblue", lwd = 2)
+
+#histogram
+hist(vegdata_U$Total_Veg)
+```
+# Middle Zone Normality:
+```{r}
+#QQ-Plot:
+qqnorm(vegdata_M$Total_Veg, pch = 1, frame = FALSE)
+qqline(vegdata_M$Total_Veg, col = "steelblue", lwd = 2)
+
+#histogram
+hist(vegdata_M$Total_Veg)
+```
+# Lower Zone Normality:
+```{r}
+#QQ-Plot:
+qqnorm(vegdata_L$Total_Veg, pch = 1, frame = FALSE)
+qqline(vegdata_L$Total_Veg, col = "steelblue", lwd = 2)
+
+#histogram
+hist(vegdata_L$Total_Veg)
+```
+
+
+
+
+#### ANOVA: tests whether any of the group means are different from the overall mean of the data by checking the variance of each individual group against the overall variance of the data. If one or more groups falls outside the range of variation predicted by the null hypothesis (all group means are equal), then the test is statistically significant. 
+```{r}
+
+```
+
+
+
+
+
+
+
 ```{r}
 hist((vegdatamerged$SpFo[vegdatamerged$Date == "2022-July"]))
 
