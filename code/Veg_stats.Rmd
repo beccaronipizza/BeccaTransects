@@ -29,11 +29,11 @@ vegdata2 <- vegdata %>%
   select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
   mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
   select(-BaGr_1, -BaGr_2) %>% 
-  mutate(Total_Veg = 25-BaGr) %>%  #Total_veg is simply what is remaining after subtracting the bare ground
-  mutate(across(SpFo:Total_Veg, ~ .x*4)) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
+  #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
   mutate(Date = paste0(Year, "-", Month)) %>% 
   mutate(Total_Veg2 = rowSums(across(SpFo:LeTr))) %>% 
-  filter(!Total_Veg2 == 0) 
+  filter(!Total_Veg2 == 0)  #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count.
 ```
 
 #### Using Full_Join to combine main data sheet and metadata sheet ####
@@ -56,19 +56,20 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
   select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
 ```
 
-# 4. Now to break the data up into the three zones. The middle zone contains logs, so I'll need to make the log location's NA's:
+# 4. Now to break the data up into the three zones and remove the reference logs. 
+# *The middle zone contains logs, so I'll need to make the log location's NA's:
 
 # Upper Zone:
 ```{r}
-vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U"),]
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),]
 ```
 # Middle Zone:
 ```{r}
-vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M"),]
+vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presence != "reference"),]
 ```
 # Lower Zone:
 ```{r}
-vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L"),]
+vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presence != "reference"),]
 ```
 
 
@@ -79,55 +80,63 @@ vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L"),]
 # Upper Zone Normality:
 ```{r}
 #QQ-Plot:
-qqnorm(vegdata_U$Total_Veg, pch = 1, frame = FALSE)
-qqline(vegdata_U$Total_Veg, col = "steelblue", lwd = 2)
+qqnorm(vegdata_U$Total_Veg2, pch = 1, frame = FALSE)
+qqline(vegdata_U$Total_Veg2, col = "steelblue", lwd = 2)
+
+# QQ gamma dist:
+set.seed(17)
+vegdata_U$Total_Veg2 <- rgamma(2408,1)
+
+qqnorm(vegdata_U$Total_Veg2, pch = 1, frame = FALSE)
+qqline(vegdata_U$Total_Veg2, col = "steelblue", lwd = 2)
+
+# QQ Chi-square dist:
+set.seed(17)
+vegdata_U$Total_Veg2 <- rchisq(2408,5)  
+
+qqnorm(vegdata_U$Total_Veg2, pch = 1, frame = FALSE)
+qqline(vegdata_U$Total_Veg2, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_U$Total_Veg)
+hist(vegdata_U$Total_Veg2)
 ```
 # Middle Zone Normality:
 ```{r}
 #QQ-Plot:
-qqnorm(vegdata_M$Total_Veg, pch = 1, frame = FALSE)
-qqline(vegdata_M$Total_Veg, col = "steelblue", lwd = 2)
+qqnorm(vegdata_M$Total_Veg2, pch = 1, frame = FALSE)
+qqline(vegdata_M$Total_Veg2, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_M$Total_Veg)
+hist(vegdata_M$Total_Veg2)
 ```
 # Lower Zone Normality:
 ```{r}
 #QQ-Plot:
-qqnorm(vegdata_L$Total_Veg, pch = 1, frame = FALSE)
-qqline(vegdata_L$Total_Veg, col = "steelblue", lwd = 2)
+qqnorm(vegdata_L$Total_Veg2, pch = 1, frame = FALSE)
+qqline(vegdata_L$Total_Veg2, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_L$Total_Veg)
+hist(vegdata_L$Total_Veg2)
 ```
-
-
-
 
 #### ANOVA: tests whether any of the group means are different from the overall mean of the data by checking the variance of each individual group against the overall variance of the data. If one or more groups falls outside the range of variation predicted by the null hypothesis (all group means are equal), then the test is statistically significant. 
 ```{r}
 
 ```
 
+#### GLM:
 
-
-
-
-
-
+#Upper Zone GLM:
 ```{r}
-hist((vegdatamerged$SpFo[vegdatamerged$Date == "2022-July"]))
+hist((vegdata_U$Total_Veg2[vegdata_U$Date == "2023-August"]))
 
-glmm1 <- glm((SaPa/100) ~ Shoreline_End*Log_Presence,
-               data = vegdatamerged[vegdatamerged$Date == "2022-July" & vegdatamerged$Zone == "U",],
+glm1 <- glm((Total_Veg2) ~ Shoreline_End*Log_Presence,
+               data = vegdata_U[vegdata_U$Date == "2023-August",],
                family = gaussian)
 
-glmm1
-plot(glmm1)
-anova(glmm1, test = "F")
+glm1
+plot(glm1)
+anova(glm1, test = "F")
 
 ```
 
