@@ -11,10 +11,17 @@ library(tidyverse)
 library(dplyr)
 library(lubridate)
 ```
+#1. Run these:
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+
+RTKpindata_norefs <- read_xlsx("RTKSedimentPinData.xlsx", sheet = "RTKData_thesispins_norefs_pivot")
+
+```
 
 #prepping the data frame:
-```{r}
 ##*remember that this df is still in ft NADV88 and isn't converted until the next step
+```{r}
 RTKpins <- RTKpindata_norefs %>% 
   select(-c("midg","midt","upt","upg", "lowt", "lowg", "Date")) %>% #can remove these columns bc the top-ground calculations are already calculated in excel in their own columns
   mutate_at(c('upper', 'middle'), as.numeric) %>% #removed the POSITX (lubridate) version of date

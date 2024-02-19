@@ -64,7 +64,7 @@ VegDataMerged <- full_join(VegDataNew, vegmetadata, by = "Transect_ID") %>%
 # *We removed the row where C6-L174 is equal to quadrat 3 and zone U since it was a big outlier.
 ```{r}
 VegDataID_U <- VegDataMerged[VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "U" &
-                             !(VegDataMerged$Transect_ID == "C6-L174" & VegDataMerged$Quadrat == 3 &   VegDataMerged$Zone == "U"),
+                             !(VegDataMerged$Transect_ID == "C6-L174" & VegDataMerged$Quadrat == 3 & VegDataMerged$Zone == "U"),
                            c('Transect_ID', 'Distance_meters', 'Quadrat', 'Zone', 'Date', 'Shoreline_End', 'Log_Presence')]
 
 

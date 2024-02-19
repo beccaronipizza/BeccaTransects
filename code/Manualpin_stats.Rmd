@@ -89,14 +89,14 @@ step(glm2) #AIC only measures the relative quality of models. The lower the AIC 
 
 #If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
 
-anova(glm2, test = "F") #the F test confirms the AIC results form above.
+anova(glm2, test = "F") #the F test confirms the AIC results from above.
 
 ```
 ##Results:
 
 #A. Leverage cleared up
 
-#B. Only strong support for Shoreline End and Pin Location individually having a strong effect and no more trend for all three combined. This is good! Much easier to explain in thesis.
+#B. Pin location  (u,m,l) most important for determining significance. Shoreline end also sig. but not as much as pin location. ie. Only strong support for Shoreline End and Pin Location individually having a strong effect and no more trend for all three combined. This is good! Much easier to explain in thesis.
 
 
 #Further tests:
@@ -106,5 +106,91 @@ emmeans(glm2, specs = pairwise ~ Shoreline_End:Pin_Location) ## I get output but
 check_normality(glm2) ##look into this!
 
 check_heteroscedasticity(glm2)  ## when the standard deviations of a predicted variable, monitored over different values of an independent variable or as related to prior time periods, are non-constant.
+```
+#### Since pin location showed the most significance, then I will split my data into the three zones and test seperately.
+
+#Upper Zone:
+```{r}
+sedpinchange_U <- sedpinchange[sedpinchange$Pin_Location == "UpperDiff" & !(sedpinchange$Log_Presence == "reference"),]
+
+hist(sedpinchange_U$Sediment_Change)
+
+glm3 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = sedpinchange_U, family = 'gaussian')
+
+plot(glm3) #!! There are three big outliers in this data according to the QQ plots: points 20-22 which are C2-L27, C2-BW27, and C2-L22. Checked field notes with excel spreadsheet and values are correct. 
+
+
+
+### Going to test without the outliers to see if it makes a difference:
+sedpinchange_U_out <- sedpinchange_U[-c(20:22),]  #remove the rows that contain the outliers
+
+hist(sedpinchange_U_out$Sediment_Change)
+
+glm3 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = sedpinchange_U_out, family = 'gaussian')
+
+plot(glm3)
+
+summary(glm3)
+
+step(glm3) #AIC only measures the relative quality of models. The lower the AIC value the better, but only if the precision of your answer is not of the utmost importance. These AIC results suggest that shoreline  end east and log prosence no log have the biggest effect.
+
+#If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
+
+anova(glm3, test = "F") #the F test Indicates that with the outliers removed, shoreline end has the biggest effect (Pr(>F) = 0.0002549) and log presence has a slight effect (Pr(>F) = 0.224743).  
+
+#Further testing:
+check_heteroscedasticity(glm3)  ## Heteroscedasticity (the violation of homoscedasticity) is present when the size of the error term differs across values of an independent variable.  The impact of violating the assumption of homoscedasticity is a matter of degree, increasing as heteroscedasticity increases.The problem that heteroscedasticity presents for regression models is simple.  Recall that ordinary least-squares (OLS) regression seeks to minimize residuals and in turn produce the smallest possible standard errors.  By definition, OLS regression gives equal weight to all observations, but when heteroscedasticity is present, the cases with larger disturbances have more “pull” than other observations.  In this case, weighted least squares regression would be more appropriate, as it down-weights those observations with larger disturbances.
+
+#*** This data IS homescedastic
+```
+
+#Middle Zone:
+```{r}
+sedpinchange_M <- sedpinchange[sedpinchange$Pin_Location == "MiddleDiff" & !(sedpinchange$Log_Presence == "reference"),]
+
+hist(sedpinchange_M$Sediment_Change)
+
+glm4 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = sedpinchange_M, family = 'gaussian')
+
+plot(glm4)
+
+summary(glm4)
+
+step(glm4) #AIC only measures the relative quality of models. The lower the AIC value the better, but only if the precision of your answer is not of the utmost importance. 
+
+#If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
+
+anova(glm4, test = "F") #the F test shows no significance for the effects of shoreline end, log presence, or a combination of the two. 
+
+#Further testing:
+check_normality(glm4) ##look into this!
+
+check_heteroscedasticity(glm4)  ## when the standard deviations of a predicted variable, monitored over different values of an independent variable or as related to prior time periods, are non-constant.
+
+# *This data IS homoscedastic!
+```
+
+#Lower Zone:
+```{r}
+sedpinchange_L <- sedpinchange[sedpinchange$Pin_Location == "LowerDiff" & !(sedpinchange$Log_Presence == "reference"),]
+
+hist(sedpinchange_L$Sediment_Change)
+
+glm5 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = sedpinchange_L, family = 'gaussian')
+
+plot(glm5)
+
+summary(glm5)
+
+step(glm5) #AIC only measures the relative quality of models. The lower the AIC value the better, but only if the precision of your answer is not of the utmost importance. 
+
+#If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
+
+anova(glm5, test = "F") #the F test shows that shoreline end only has an effect on the results. 
+
+#Further testing:
+check_heteroscedasticity(glm5)  ## when the standard deviations of a predicted variable, monitored over different values of an independent variable or as related to prior time periods, are non-constant.
+
+#* This data IS homoscedastic.
 ```
 

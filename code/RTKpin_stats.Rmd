@@ -11,6 +11,12 @@ library(tidyverse)
 library(dplyr)
 library(ggrepel)
 library(ggpubr)
+library(lubridate)
+library(emmeans)
+library(magrittr)
+library(performance)
+library(pastecs)
+library(DHARMa) #Interpretation of model fit
 ```
 
 #1. Run these:
@@ -19,8 +25,6 @@ setwd("~/GitHub/BeccaTransects/data")
 
 RTKpindata_norefs <- read_xlsx("RTKSedimentPinData.xlsx", sheet = "RTKData_thesispins_norefs_pivot")
 ```
-
-
 #2. Prepping the data frame:
 
 ## *Remember, this RTK data  only shows initial and final measurements.  No in-between like the physical measurements have. 
@@ -30,7 +34,10 @@ RTKpins_norefs <- RTKpindata_norefs %>%
   select(-c("midg","midt","upt","upg", "lowt", "lowg", "Date")) %>% #can remove these columns bc the top-ground calculations are already calculated in excel in their own columns
   mutate_at(c('upper', 'middle'), as.numeric) %>% #removed the POSITX (lubridate) version of date
   mutate(Date = paste0(Year, "-", Month)) %>% #created my own date to match the sediment pin code
-  rename(Transect_ID = Name) %>%  #change column header "Name" to "Transect_ID"
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  group_by(Name, Shoreline_End) %>%
+  rename(Transect_ID = Name)
+  
   
   
 
@@ -41,23 +48,289 @@ RTKpinschange_norefs <- RTKpins_norefs %>%
   select(-c("Date", "Year", "Month", "upper", "middle", "lower")) %>% 
   distinct() %>%  #this removes repeated values for each month's calculation
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east"))) %>%
-  pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change")
+  pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") 
+  
 ```
 
-
-# 3. Running a GLM taking interactions into account:
+#3.  Running a basic GLM: without taking into account interactions
 ```{r}
+
+glm1 <- glm(Sediment_Change ~ Shoreline_End + Pin_Location + Log_Presence, data = RTKpinschange_norefs, family = 'gaussian')
+
+#plots to look at
+plot(glm1)
+simulationoutput <- simulateResiduals(fittedModel = glm1)
+plot(simulationoutput) #no significant problems detected
+
+summary(glm1) #the Deviance residuals look no good based on this video (~10 min) https://youtu.be/boPyjojYHUY Median should be close to zero, 1Q and 3Q abs. val. should be similar to each other, and also same with Min and Max abs. values which should also be < 3. If it not <3, then it is deviating from a normal distribution. 
+
+anova(glm1, test = "F") #Pin location*** and shoreline end** are significant
+```
+##Results of Whole Shoreline without taking interactions into account:
+
+#A. 
+
+
+
+
+
+
+# 4. Running a GLM on entire shoreline taking interactions into account *Reference pins were already not included in the spreadsheet so we don't need to remove them here.:
+```{r}
+#quick visual plots
 hist(RTKpinschange_norefs$Sediment_Change)
 
-glm3 <- glm(Sediment_Change ~ Shoreline_End * Pin_Location * Log_Presence, data = RTKpinschange_norefs, family = 'gaussian')
+ggplot(RTKpinschange_norefs, aes(`Sediment_Change`)) +
+        geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +
+        stat_function(fun = dnorm, args = list(mean = mean(RTKpinschange_norefs$Sediment_Change, na.rm = T), 
+                                               sd = sd(RTKpinschange_norefs$Sediment_Change, na.rm = T))) +
+        xlab("Sediment Change (%)")
 
-plot(glm3)
+qqnorm(RTKpinschange_norefs$Sediment_Change, main = "Normal Q-Q Plot for Sediment Change")
+
+#Now using summary statistics to confirm:
+
+# *from psych package: The two we are primarily concerned about for normality are the skew and kurtosis results. Skew describes the symmetry of a distribution and kurtosis the peakedness. 
+
+#Skewness assesses the extent to which a variable’s distribution is symmetrical. If the distribution of responses for a variable stretches toward the right or left tail of the distribution, then the distribution is characterized as skewed. 
+#A negative skewness indicates a greater number of larger values, whereas a positive skewness indicates a greater number of smaller values. 
+#As a general guideline, a skewness value between −1 and +1 is considered excellent, but a value between −2 and +2 is generally considered acceptable. Values beyond −2 and +2 are considered indicative of substantial nonnormality." (Hair et al., 2022, p. 66)
+
+#Kurtosis is a measure of whether the distribution is too peaked (a very narrow distribution with most of the responses in the center). 
+#A positive value for the kurtosis indicates a distribution more peaked than normal. 
+#In contrast, a negative kurtosis indicates a shape flatter than normal. 
+#Analogous to the skewness, the general guideline is that if the kurtosis is greater than +2, the distribution is too peaked. Likewise, a kurtosis of less than −2 indicates a distribution that is too flat. When both skewness and kurtosis are close to zero, the pattern of responses is considered a normal distribution (George & Mallery, 2019)." (Hair et al., 2022, p. 66).
+
+#When both skewness and kurtosis are zero (a situation that researchers are very unlikely to ever encounter), the pattern of responses is considered a normal distribution.
+describe(RTKpinschange_norefs$Sediment_Change) #skew = 0.09	and kurtosis = 0.21	 #seems normal
+
+# *from pastecs package: The first two parameters of interest are the skew.2se and kurt.2se results, which are the skew and kurtosis value divided by 2 standard errors. If the absolute value of these parameters are > 1 then they are significant (at p < .05) suggesting strong potential for non-normality.
+stat.desc(RTKpinschange_norefs$Sediment_Change, basic = FALSE, norm = TRUE) #skew.2SE = 0.1862842 kurt.2SE = 0.2214850  #seems normal
+
+#The Shapiro-Wilk test is a statistical test of the hypothesis that the distribution of the data as a whole deviates from a comparable normal distribution. If the test is non-significant (p>.05) it tells us that the distribution of the sample is not significantly different from a normal distribution. If, however, the test is significant (p < .05) then the distribution in question is significantly different from a normal distribution. 
+# **Its important to note that there are limitations to the Shapiro-Wilk test. As the dataset being evaluated gets larger, the Shapiro-Wilk test becomes more sensitive to small deviations which leads to a greater probability of rejecting the null hypothesis (null hypothesis being the values come from a normal distribution).
+shapiro.test(RTKpinschange_norefs$Sediment_Change)  #p-value = 0.2551 so data is assumed to be normal
+
+
+#modeling a glm:
+glm1 <- glm(Sediment_Change ~ Shoreline_End * Pin_Location * Log_Presence, data = RTKpinschange_norefs, family = 'gaussian')
+
+plot(glm1) #we dont want to see a funnel shape on the residuals vs. fitted values plot (which would indicate heteroscadicity)
+
+summary(glm1)
+
+step(glm1)
+
+anova(glm1, test = "F") #Results of F test is that there is a strong main effect of Pin location, a sig. main effect of shoreline end, and a trend for all three variables combined. 
+
+#further testing:
+check_heteroscedasticity(glm1) #AKA Leven's F-test: Homoscedasticity, or homogeneity of variances, is an assumption of equal or similar variances in different groups being compared. Uneven variances in samples result in biased and skewed test results. **this data IS homoscedastic p = 0.712
+```
+
+##Whole Shoreline Results: 
+
+#A. All normality tests assume a normla distribution
+
+#B. the glm shows strong main effects for shoreline end and a sig. effect of pin location PLUS a "trend" for all three variables combined. This time, reference pins can't be an issue like they were with the first glm round on the manual sediment pins.
+
+
+#### Since pin location showed the most significance, then I will split my data into the three zones and test seperately.
+
+#Upper Zone:
+```{r}
+#prepare df:
+RTKpinschange_norefs_U <- RTKpinschange_norefs[RTKpinschange_norefs$Pin_Location == "UpperDiff",]
+
+#quick visual plots
+ggplot(RTKpinschange_norefs_U, aes(`Sediment_Change`)) +
+        geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +
+        stat_function(fun = dnorm, args = list(mean = mean(RTKpinschange_norefs_U$Sediment_Change, na.rm = T), 
+                                               sd = sd(RTKpinschange_norefs_U$Sediment_Change, na.rm = T))) +
+        xlab("Sediment Change (%)")
+
+qqnorm(RTKpinschange_norefs_U$Sediment_Change, main = "Normal Q-Q Plot for Sediment Change")
+
+hist(RTKpinschange_norefs_U$Sediment_Change)
+
+#using summary statistics
+describe(RTKpinschange_norefs_U$Sediment_Change) #skew = 0.63	 and kurtosis = 0.82
+stat.desc(RTKpinschange_norefs_U$Sediment_Change, basic = FALSE, norm = TRUE) #skew.2SE = 0.77154878 and kurtosis.2SE = 0.51286600
+shapiro.test(RTKpinschange_norefs_U$Sediment_Change) # p= 0.05482 data is NOT normal!!
+
+glm2 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = RTKpinschange_norefs_U, family = 'gaussian')
+
+plot(glm2) 
+
+summary(glm2)
+
+step(glm2) #AIC only measures the relative quality of models. The lower the AIC value the better, but only if the precision of your answer is not of the utmost importance. 
+
+#If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
+
+anova(glm2, test = "F") #F test shows that there is a slight combination effect of shoreline end and log presence (Pr(>F)= 0.01683) and also a trend in the main effect of shoreline end (Pr(>F) = 0.08090)
+
+#Further testing:
+check_heteroscedasticity(glm2) #Data is NOT homoscedastic!! QQ plot shows a couple of big outliers: points 5 and 6 (C2-L22 and C2-L27, which were removed from manual data too!), and 12 (C3-BW66). Will try removing them and see how the results change:
+
+
+
+
+###Going to test without the outliers to see if it makes a difference:  Answer = no!
+
+#prep the new df:
+RTKpinschange_norefs_U_out <- RTKpinschange_norefs_U[-c(5:6, 12),] #removed the three big outliers
+
+#summary stats:
+shapiro.test(RTKpinschange_norefs_U_out$Sediment_Change) #p-value = 0.005849 data is assumed to be NOT normal!
+hist(RTKpinschange_norefs_U_out$Sediment_Change)
+
+glm3 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = RTKpinschange_norefs_U_out, family = 'gaussian')
+
+plot(glm3) 
 
 summary(glm3)
 
-step(glm3)
+step(glm3) #AIC only measures the relative quality of models. The lower the AIC value the better, but only if the precision of your answer is not of the utmost importance. 
 
-anova(glm3, test = "F")
+#If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
+
+anova(glm3, test = "F") 
+
+#Further testing:
+check_heteroscedasticity(glm3) #still heteroscedastic!!
 
 ```
+## Upper Zone Results:
 
+#A. Initially, the data was not homoscedastic and the qq-plot showed a couple of BIG outliers.
+
+#B. Outliers were removed but data still appears to not be normal.
+
+
+
+#Middle Zone: 
+```{r}
+#prep the df:
+RTKpinschange_norefs_M <- RTKpinschange_norefs[RTKpinschange_norefs$Pin_Location == "MiddleDiff",]
+
+
+#quick visual plots
+ggplot(RTKpinschange_norefs_M, aes(`Sediment_Change`)) +
+        geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +
+        stat_function(fun = dnorm, args = list(mean = mean(RTKpinschange_norefs_M$Sediment_Change, na.rm = T), 
+                                               sd = sd(RTKpinschange_norefs_M$Sediment_Change, na.rm = T))) +
+        xlab("Sediment Change (%)")
+
+qqnorm(RTKpinschange_norefs_M$Sediment_Change, main = "Normal Q-Q Plot for Sediment Change")
+
+hist(RTKpinschange_norefs_M$Sediment_Change)
+
+#using summary statistics
+describe(RTKpinschange_norefs_M$Sediment_Change) #skew =1.48	and kurtosis = 3.07	VERY nonnormal!!
+stat.desc(RTKpinschange_norefs_M$Sediment_Change, basic = FALSE, norm = TRUE) #
+shapiro.test(RTKpinschange_norefs_M$Sediment_Change) #p-value = 0.001473 NOT normal!!
+
+#running the model:
+glm2 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = RTKpinschange_norefs_M, family = 'gaussian')
+
+plot(glm4) #point 17 very close to being outside Cook's distance!! Might be throwing things off
+
+summary(glm4)
+
+step(glm4) #AIC only measures the relative quality of models. The lower the AIC value the better, but only if the precision of your answer is not of the utmost importance. 
+
+#If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
+
+anova(glm4, test = "F") #F test shows no significance anywhere
+
+#Further testing:
+check_heteroscedasticity(glm4) #Data IS homoscedastic! 
+
+
+
+
+###Going to test without the outliers to see if it makes a difference:  Answer = YES!
+
+#prep the new df:
+RTKpinschange_norefs_M_out <- RTKpinschange_norefs_M[-c(17),] #removed the point 17
+
+#quick visual plots
+ggplot(RTKpinschange_norefs_M_out, aes(`Sediment_Change`)) +
+        geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +
+        stat_function(fun = dnorm, args = list(mean = mean(RTKpinschange_norefs_M_out$Sediment_Change, na.rm = T), 
+                                               sd = sd(RTKpinschange_norefs_M_out$Sediment_Change, na.rm = T))) +
+        xlab("Sediment Change (%)")
+
+qqnorm(RTKpinschange_norefs_M_out$Sediment_Change, main = "Normal Q-Q Plot for Sediment Change")
+
+hist(RTKpinschange_norefs_M_out$Sediment_Change)
+
+#using summary statistics
+describe(RTKpinschange_norefs_M_out$Sediment_Change) #skew = 0.58	and kurtosis = -0.28	*normal
+stat.desc(RTKpinschange_norefs_M_out$Sediment_Change, basic = FALSE, norm = TRUE) #Skew.2SE = 0.7272006 and kurtosis.2SE = -0.1820263  *normal
+shapiro.test(RTKpinschange_norefs_M_out$Sediment_Change) #p-value = 0.2771 indicating normal distribution
+
+#running the model:
+glm5 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = RTKpinschange_norefs_M_out, family = 'gaussian')
+
+plot(glm5) 
+
+summary(glm5)
+
+step(glm5) #AIC only measures the relative quality of models. The lower the AIC value the better, but only if the precision of your answer is not of the utmost importance. 
+
+#If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
+
+anova(glm5, test = "F") #Results: Main effect of log presence is slightly significant (Pr(>F)) = 0.008408 **
+
+#Further testing:
+check_heteroscedasticity(glm3) #Also homoscedastic
+```
+##Middle Zone Results:
+
+#A. Initially, data did not look normally distributed, skew, kurtosis, and shapiro-wilk's indicate non-normality.
+
+#B. One big outlier was removed and the model was rerun. All the above cleared up and a main effect of log presence was found to be only slightly significant. 
+
+
+
+#Lower Zone:
+```{r}
+#prepping df:
+RTKpinschange_norefs_L <- RTKpinschange_norefs[RTKpinschange_norefs$Pin_Location == "LowerDiff",]
+
+#quick visual plots
+ggplot(RTKpinschange_norefs_L, aes(`Sediment_Change`)) +
+        geom_histogram(aes(y = ..density..), colour = "black", fill = "white") +
+        stat_function(fun = dnorm, args = list(mean = mean(RTKpinschange_norefs_L$Sediment_Change, na.rm = T), 
+                                               sd = sd(RTKpinschange_norefs_L$Sediment_Change, na.rm = T))) +
+        xlab("Sediment Change (%)")
+
+qqnorm(RTKpinschange_norefs_L$Sediment_Change, main = "Normal Q-Q Plot for Sediment Change")
+
+hist(RTKpinschange_norefs_L$Sediment_Change)
+
+#using summary statistics
+describe(RTKpinschange_norefs_L$Sediment_Change) #skew = 0.76		and kurtosis = 0.17 *normal
+stat.desc(RTKpinschange_norefs_L$Sediment_Change, basic = FALSE, norm = TRUE) #Skew.2SE = 0.98049288 and kurtosis.2SE = 0.11144287 *normal
+shapiro.test(RTKpinschange_norefs_L$Sediment_Change) #p-value = 0.03308 indicates a possible non-normal distribution
+
+glm6 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = RTKpinschange_norefs_L, family = 'gaussian')
+
+plot(glm6) 
+
+summary(glm6)
+
+step(glm6)
+#If you want to run the chi^2 test use the drop 1 function found on pg. 222 of "Mixed Effect Models..."
+
+anova(glm6, test = "F") #F test shows very SLIGHT significance in the effect of shoreline end (Pr(>F)) = 0.04526 *
+
+#Further testing:
+check_heteroscedasticity(glm6) #Data IS homoscedastic! 
+```
+## Lower Zone Results:
+
+#A. Shapiro test indicates a slight non-normal distribution but plots, skew, and kurtosis look ok.
+
+#B. Only a slight effect of shoreline end.
