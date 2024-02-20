@@ -1,0 +1,276 @@
+---
+title: "Vegetation Plots EvW and L v NL"
+output: html_notebook
+---
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(viridisLite)
+library(lubridate)
+library(naniar) #allows you to use the replace_with_na_at()
+```
+
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data")
+```
+
+```{r}
+# 1. creating the main data frame:
+
+#First, I need to replace all BaGr values with NA's where it is coded as log (as seens in the filter() row):
+vegdatanew <- vegdata %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 'DiSp', 
+              'Taraxacum', 'Coytote_Bush','BoMa'), as.numeric) %>% 
+  mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  filter(!(BaGr_Type_1 == '7' | BaGr_Type_2 == '7')) %>% #remove rows where BaGr is coded as log
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%
+  mutate(SaSp = SaPa + SaDe) %>% #make combined pickleweed comlumn to use for calculatiing how much to divy up the picklepups in the two following columns
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% #divying up picklepups
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% #combine all grasses into one column
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) %>% #Total_veg is simply what is remaining after subtracting the bare ground
+  mutate(SaPa = SaPa_new) %>% #rename the newly created pickleweed columns from above back to to their original names
+  mutate(SaDe = SaDe_new) %>% 
+  mutate(across(SpFo:SaDe, ~ .x*4)) %>% #makes everything into percentages
+  mutate(Date = paste0(Year, "-", Month)) %>% 
+  pivot_longer(cols = SpFo:SaDe,
+               names_to = "Species_code",
+               values_to = "Percent_cover")
+```
+
+#I want to clean up the metadata sheet:
+```{r}
+vegmetadata %>% 
+  select(Transect_ID, Shoreline_End, Log_Presence) 
+  
+```
+
+#I want to combine the veg data and veg metadata df's togetherand remove the extranneous columns:
+```{r}
+vegdata_merged <- full_join(vegdatanew, vegmetadata, by = "Transect_ID") %>% 
+  select(-c(...9:...12))
+```
+
+# #################################################################################################################################### #
+#Creating a df just for SpFo for BARPLOT:
+```{r}
+SpFo <- vegdata_merged[(vegdata_merged$Species_code == 'SpFo' & vegdata_merged$Date == '2022-June' | vegdata_merged$Date == '2023-August'),] %>% 
+  rename(Percent_Spartina = Percent_cover) %>% 
+  select(-c('Species_code','Fence_Presence', 'Pre-veg', 'Planted_cordgrass', 'Mud', 'Toeberm')) %>% 
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(Percent_Spartina, na.rm = TRUE),
+            sd_cover = sd(Percent_Spartina, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) %>%
+  #arrange(Date) %>% #not sure if this line matters
+  #group_by(Zone, Shoreline_End, Log_Presence) %>% 
+  #mutate(Percent_Change = (last(mean_cover) - first(mean_cover))) %>% 
+  #mutate(Percent_Change = abs(Percent_Change)) %>% 
+  #select(-c('Date')) %>%
+  #distinct()
+```
+
+```{r}
+SpFo_June2022 <- ggplot(SpFo, 
+                        mapping = aes(x = Zone,
+                                y = mean_cover,
+                                fill = Date,
+                                color = Date)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Shoreline_End ~ Log_Presence) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(25, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Vegetation Cover Based On Presence of Log per Marsh Zone",
+    subtitle = "June 2022",
+    x = "Marsh Zone",
+    y ="Total Vegetated Cover (%)",
+    fill = "Log Presence",
+    caption = "*Error bars reflect standard error") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=16),
+        legend.title = element_text(face = "bold", size=15),
+        legend.text=element_text(size=15),
+        axis.text.x = element_text(size = 15),
+        axis.text.y = element_text(size = 13),
+        plot.title = element_text(face = "bold", size = 15),
+        plot.caption = element_text(size = 13),
+        plot.subtitle = element_text(size = 13),
+        strip.text = element_text(size = 18, color = "black"))
+
+
+SpFo_June2022
+```
+
+```{r}
+SpFo_scatter <- ggplot(SpFo, 
+                        mapping = aes(x = Zone,
+                                y = mean_cover,
+                                fill = Log_Presence,
+                                color = Log_Presence)) +
+  geom_point() +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Shoreline_End ~.,) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(25, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Vegetation Cover Based On Presence of Log per Marsh Zone",
+    subtitle = "June 2022",
+    x = "Marsh Zone",
+    y ="Total Vegetated Cover (%)",
+    fill = "Log Presence",
+    caption = "*Error bars reflect standard error") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=16),
+        legend.title = element_text(face = "bold", size=15),
+        legend.text=element_text(size=15),
+        axis.text.x = element_text(size = 15),
+        axis.text.y = element_text(size = 13),
+        plot.title = element_text(face = "bold", size = 15),
+        plot.caption = element_text(size = 13),
+        plot.subtitle = element_text(size = 13),
+        strip.text = element_text(size = 18, color = "black"))
+
+
+SpFo_scatter
+```
+
+###########Finally, create a df that contains data from June 2022 (initial) and August 2023 (final) annnd we only need the total veg percent cover column:
+```{r}
+vegdataLnL <- vegdata_merged[vegdata_merged$Date %in% c('2022-June','2023-August'),] %>%  #select June 2022 (initial) and August 2023 (final) veg data annnd Where species_code == Total_veg
+  group_by(Date, Zone, Species_code, Log_Presence, Shoreline_End) %>% 
+  summarize(mean_cover = mean(Percent_cover, na.rm = TRUE),
+            sd_cover = sd(Percent_cover, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>%
+  mutate(Zone = factor(Zone, levels = c("U", "M", "L"))) 
+ 
+  
+  
+#pivot_wider(names_from = Zone, values_from = Percent_cover) %>% 
+  #mutate_if(is.numeric, ~replace(., is.na(.), 0))
+```
+
+#set up the color-blind color palette
+```{r}
+cbp <- c("#0072B2", "#CC79A7", "#D55E00", "#009E73", "#56B4E9", "#F0E442" , "#E69F00", "#000000")
+```
+
+#Plot:
+```{r}
+LvNLplot_June2022 <- ggplot(data = vegdataLnL[vegdataLnL$Species_code == "Total_Veg",],   
+                  mapping = aes(x = Zone,
+                                y = mean_cover,
+                                group = Log_Presence,
+                                fill = Log_Presence)) +
+  geom_boxplot() +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Shoreline_End ~.,) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(25, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Vegetation Cover Based On Presence of Log per Marsh Zone",
+    subtitle = "June 2022",
+    x = "Marsh Zone",
+    y ="Total Vegetated Cover (%)",
+    fill = "Log Presence",
+    caption = "*Error bars reflect standard error") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=16),
+        legend.title = element_text(face = "bold", size=15),
+        legend.text=element_text(size=15),
+        axis.text.x = element_text(size = 15),
+        axis.text.y = element_text(size = 13),
+        plot.title = element_text(face = "bold", size = 15),
+        plot.caption = element_text(size = 13),
+        plot.subtitle = element_text(size = 13),
+        strip.text = element_text(size = 18, color = "black"))
+
+
+LvNLplot_June2022
+```
+
+```{r}
+LvNLplot_June2022 <- ggplot(data = vegdataLnL[vegdataLnL$Date == "2022-June",],   
+                  mapping = aes(x = Zone,
+                                y = mean_cover,
+                                group = Log_Presence,
+                                fill = Log_Presence)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Shoreline_End ~.,) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(25, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Vegetation Cover Based On Presence of Log per Marsh Zone",
+    subtitle = "June 2022",
+    x = "Marsh Zone",
+    y ="Total Vegetated Cover (%)",
+    fill = "Log Presence",
+    caption = "*Error bars reflect standard error") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=16),
+        legend.title = element_text(face = "bold", size=15),
+        legend.text=element_text(size=15),
+        axis.text.x = element_text(size = 15),
+        axis.text.y = element_text(size = 13),
+        plot.title = element_text(face = "bold", size = 15),
+        plot.caption = element_text(size = 13),
+        plot.subtitle = element_text(size = 13),
+        strip.text = element_text(size = 18, color = "black"))
+
+
+LvNLplot
+```
+
+```{r}
+LvNLplot_August2023 <- ggplot(data = vegdataLnL[vegdataLnL$Date == "2023-August",],   
+                  mapping = aes(x = Zone,
+                                y = mean_cover,
+                                group = Log_Presence,
+                                fill = Log_Presence)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Shoreline_End ~.,) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Vegetation Cover Based On Presence of Log per Marsh Zone",
+    subtitle = "August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetated Cover (%)",
+    fill = "Log Presence",
+    caption = "*Error bars reflect standard error") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=16),
+        legend.title = element_text(face = "bold", size=15),
+        legend.text=element_text(size=15),
+        axis.text.x = element_text(size = 15),
+        axis.text.y = element_text(size = 13),
+        plot.title = element_text(face = "bold", size = 18),
+        plot.caption = element_text(size = 13),
+        plot.subtitle = element_text(size = 13),
+        strip.text = element_text(size = 18, color = "black"))
+
+
+LvNLplot
+```
+

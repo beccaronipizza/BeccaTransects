@@ -68,8 +68,7 @@ anova(glm1, test = "F") #Pin location*** and shoreline end** are significant
 ```
 ##Results of Whole Shoreline without taking interactions into account:
 
-#A. 
-
+#A. Pin Location*** and Shoreline End** 
 
 
 
