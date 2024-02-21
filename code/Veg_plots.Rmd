@@ -30,8 +30,8 @@ vegdatanew <- vegdata %>%
   select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
   mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
   select(-BaGr_1, -BaGr_2) %>% 
-  mutate(Total_Veg = 25-BaGr) %>%
-  mutate(SaSp = SaPa + SaDe) %>% #make combined pickleweed comlumn to use for calculatiing how much to divy up the picklepups in the two following columns
+  mutate(Total_Veg = rowSums(across(SpFo:LeTr), na.rm = T)) %>%
+  mutate(SaSp = SaPa + SaDe) %>% #make combined pickleweed comlumn to use for calculating how much to divy up the picklepups in the two following columns
   mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% #divying up picklepups
   mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
   mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% #combine all grasses into one column
@@ -59,62 +59,100 @@ vegdata_merged <- full_join(vegdatanew, vegmetadata, by = "Transect_ID") %>%
   select(-c(...9:...12))
 ```
 
+
+
+
+
 # #################################################################################################################################### #
 #Creating a df just for SpFo for BARPLOT:
 ```{r}
-SpFo <- vegdata_merged[(vegdata_merged$Species_code == 'SpFo' & vegdata_merged$Date == '2022-June' | vegdata_merged$Date == '2023-August'),] %>% 
+SpFo <- vegdata_merged[(vegdata_merged$Species_code == 'SpFo' & vegdata_merged$Date == '2022-June' | vegdata_merged$Species_code == 'SpFo' &         vegdata_merged$Date == '2023-August'),] %>% 
   rename(Percent_Spartina = Percent_cover) %>% 
-  select(-c('Species_code','Fence_Presence', 'Pre-veg', 'Planted_cordgrass', 'Mud', 'Toeberm')) %>% 
+  select(-c('Species_code','Fence_Presence', 'Pre-veg', 'Planted_cordgrass', 'Mud', 'Toeberm', 'Month', 'Year')) %>% 
   group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
   summarize(mean_cover = mean(Percent_Spartina, na.rm = TRUE),
             sd_cover = sd(Percent_Spartina, na.rm = TRUE),
             n_cover = n()) %>% 
   mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
-         Zone = factor(Zone, levels = c("U", "M", "L")),
-         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) %>%
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+  
+```
+#set up the color-blind color palette
+```{r}
+cbp1 <- c("#F0E442", "#CC79A7", "#0072B2","#D55E00", "#009E73", "#56B4E9","#E69F00", "#000000")
+```
+
+#SpFo BARPLOT:
+```{r}
+SpFo_barplot <- ggplot(SpFo, 
+                        mapping = aes(x = Zone,
+                                y = mean_cover,
+                                fill = Date,
+                                color = Date)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  scale_fill_manual(values = cbp1) +
+  facet_grid(Shoreline_End ~ Log_Presence) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Spartina foliosa Cover Based On Presence of Log per Marsh Zone",
+    subtitle = "Comparing first survey (Jun 2022) to final survey (Aug 2023)",
+    x = "Marsh Zone",
+    y ="Total Spartina Cover (%)",
+    fill = "Survey Date",
+    caption = "*Error bars reflect standard error") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=14),
+        legend.title = element_text(face = "bold", size=14),
+        legend.text=element_text(size=12),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_cover), 
+                vjust = -0.975, 
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_dodge(0.85),
+                color = "black",
+            size = 3.25)
+  
+
+
+SpFo_barplot
+```
+
+
+# SpFO Scatter Plot
+# *Data isn't set up for this really. I think you need to undo the hashtags below:
+```{r}
+SpFo <- vegdata_merged[(vegdata_merged$Species_code == 'SpFo' & vegdata_merged$Date == '2022-June' | vegdata_merged$Species_code == 'SpFo' &         vegdata_merged$Date == '2023-August'),] %>% 
+  rename(Percent_Spartina = Percent_cover) %>% 
+  select(-c('Species_code','Fence_Presence', 'Pre-veg', 'Planted_cordgrass', 'Mud', 'Toeberm', 'Month', 'Year')) %>% 
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(Percent_Spartina, na.rm = TRUE),
+            sd_cover = sd(Percent_Spartina, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) #%>%
   #arrange(Date) %>% #not sure if this line matters
   #group_by(Zone, Shoreline_End, Log_Presence) %>% 
   #mutate(Percent_Change = (last(mean_cover) - first(mean_cover))) %>% 
   #mutate(Percent_Change = abs(Percent_Change)) %>% 
   #select(-c('Date')) %>%
   #distinct()
-```
-
-```{r}
-SpFo_June2022 <- ggplot(SpFo, 
-                        mapping = aes(x = Zone,
-                                y = mean_cover,
-                                fill = Date,
-                                color = Date)) +
-  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
-  scale_fill_manual(values = cbp) +
-  facet_grid(Shoreline_End ~ Log_Presence) +
-  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(25, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
-  labs( 
-    title = "Mean % Vegetation Cover Based On Presence of Log per Marsh Zone",
-    subtitle = "June 2022",
-    x = "Marsh Zone",
-    y ="Total Vegetated Cover (%)",
-    fill = "Log Presence",
-    caption = "*Error bars reflect standard error") +
-  theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=16),
-        legend.title = element_text(face = "bold", size=15),
-        legend.text=element_text(size=15),
-        axis.text.x = element_text(size = 15),
-        axis.text.y = element_text(size = 13),
-        plot.title = element_text(face = "bold", size = 15),
-        plot.caption = element_text(size = 13),
-        plot.subtitle = element_text(size = 13),
-        strip.text = element_text(size = 18, color = "black"))
 
 
-SpFo_June2022
-```
-
-```{r}
 SpFo_scatter <- ggplot(SpFo, 
                         mapping = aes(x = Zone,
                                 y = mean_cover,
@@ -147,130 +185,131 @@ SpFo_scatter <- ggplot(SpFo,
 SpFo_scatter
 ```
 
-###########Finally, create a df that contains data from June 2022 (initial) and August 2023 (final) annnd we only need the total veg percent cover column:
+# #################################################################################################################################### #
+#Creating a df just for SaSp for BARPLOT:
 ```{r}
-vegdataLnL <- vegdata_merged[vegdata_merged$Date %in% c('2022-June','2023-August'),] %>%  #select June 2022 (initial) and August 2023 (final) veg data annnd Where species_code == Total_veg
-  group_by(Date, Zone, Species_code, Log_Presence, Shoreline_End) %>% 
-  summarize(mean_cover = mean(Percent_cover, na.rm = TRUE),
-            sd_cover = sd(Percent_cover, na.rm = TRUE),
+SaSp <- vegdata_merged[(vegdata_merged$Species_code == 'SaSp' & vegdata_merged$Date == '2022-June' | vegdata_merged$Species_code == 'SaSp' &         vegdata_merged$Date == '2023-August'),] %>% 
+  rename(Percent_Pickleweed = Percent_cover) %>% 
+  select(-c('Species_code','Fence_Presence', 'Pre-veg', 'Planted_cordgrass', 'Mud', 'Toeberm', 'Month', 'Year')) %>% 
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(Percent_Pickleweed, na.rm = TRUE),
+            sd_cover = sd(Percent_Pickleweed, na.rm = TRUE),
             n_cover = n()) %>% 
-  mutate(se_cover = sd_cover/sqrt(n_cover)) %>%
-  mutate(Zone = factor(Zone, levels = c("U", "M", "L"))) 
- 
-  
-  
-#pivot_wider(names_from = Zone, values_from = Percent_cover) %>% 
-  #mutate_if(is.numeric, ~replace(., is.na(.), 0))
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
-
-#set up the color-blind color palette
+#SaSp BARPLOT:
 ```{r}
-cbp <- c("#0072B2", "#CC79A7", "#D55E00", "#009E73", "#56B4E9", "#F0E442" , "#E69F00", "#000000")
-```
-
-#Plot:
-```{r}
-LvNLplot_June2022 <- ggplot(data = vegdataLnL[vegdataLnL$Species_code == "Total_Veg",],   
-                  mapping = aes(x = Zone,
+SaSp_barplot <- ggplot(SaSp, 
+                        mapping = aes(x = Zone,
                                 y = mean_cover,
-                                group = Log_Presence,
-                                fill = Log_Presence)) +
-  geom_boxplot() +
-  scale_fill_manual(values = cbp) +
-  facet_grid(Shoreline_End ~.,) +
-  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(25, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
-  labs( 
-    title = "Mean % Vegetation Cover Based On Presence of Log per Marsh Zone",
-    subtitle = "June 2022",
-    x = "Marsh Zone",
-    y ="Total Vegetated Cover (%)",
-    fill = "Log Presence",
-    caption = "*Error bars reflect standard error") +
-  theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=16),
-        legend.title = element_text(face = "bold", size=15),
-        legend.text=element_text(size=15),
-        axis.text.x = element_text(size = 15),
-        axis.text.y = element_text(size = 13),
-        plot.title = element_text(face = "bold", size = 15),
-        plot.caption = element_text(size = 13),
-        plot.subtitle = element_text(size = 13),
-        strip.text = element_text(size = 18, color = "black"))
-
-
-LvNLplot_June2022
-```
-
-```{r}
-LvNLplot_June2022 <- ggplot(data = vegdataLnL[vegdataLnL$Date == "2022-June",],   
-                  mapping = aes(x = Zone,
-                                y = mean_cover,
-                                group = Log_Presence,
-                                fill = Log_Presence)) +
+                                fill = Date,
+                                color = Date)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_errorbar(aes(ymin = mean_cover - se_cover,
                     ymax = mean_cover + se_cover),
                 size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
   scale_fill_manual(values = cbp) +
-  facet_grid(Shoreline_End ~.,) +
+  facet_grid(Shoreline_End ~ Log_Presence) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(25, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(0, 130)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
-    title = "Mean % Vegetation Cover Based On Presence of Log per Marsh Zone",
-    subtitle = "June 2022",
+    title = "Mean % Pickleweed Cover Based On Presence of Log per Marsh Zone",
+    subtitle = "Comparing first survey (Jun 2022) to final survey (Aug 2023)
+    *Includes Sarcocornia pacifica and Salicornia depressa*",
     x = "Marsh Zone",
-    y ="Total Vegetated Cover (%)",
-    fill = "Log Presence",
+    y ="Total Pickleweed Cover (%)",
+    fill = "Survey Date",
     caption = "*Error bars reflect standard error") +
   theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=16),
-        legend.title = element_text(face = "bold", size=15),
-        legend.text=element_text(size=15),
-        axis.text.x = element_text(size = 15),
-        axis.text.y = element_text(size = 13),
-        plot.title = element_text(face = "bold", size = 15),
-        plot.caption = element_text(size = 13),
-        plot.subtitle = element_text(size = 13),
-        strip.text = element_text(size = 18, color = "black"))
+  theme(axis.title = element_text(face = "bold", size=14),
+        legend.title = element_text(face = "bold", size=14),
+        legend.text=element_text(size=12),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_cover), 
+                vjust = -0.975, 
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_dodge(0.85),
+                color = "black",
+            size = 3.25)
+  
 
 
-LvNLplot
+SaSp_barplot
 ```
 
+
+
+# #################################################################################################################################### #
+#Creating a df for Total Veg BARPLOT:
 ```{r}
-LvNLplot_August2023 <- ggplot(data = vegdataLnL[vegdataLnL$Date == "2023-August",],   
-                  mapping = aes(x = Zone,
+TotalVeg <- vegdata_merged[(vegdata_merged$Species_code == 'Total_Veg' & vegdata_merged$Date == '2022-June' | vegdata_merged$Species_code == 'Total_Veg' &         vegdata_merged$Date == '2023-August'),] %>% 
+  rename(Percent_Cover = Percent_cover) %>% 
+  select(-c('Species_code','Fence_Presence', 'Pre-veg', 'Planted_cordgrass', 'Mud', 'Toeberm', 'Month', 'Year')) %>% 
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(Percent_Cover, na.rm = TRUE),
+            sd_cover = sd(Percent_Cover, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+#Total Veg BARPLOT:
+```{r}
+TotalVeg_barplot <- ggplot(TotalVeg, 
+                        mapping = aes(x = Zone,
                                 y = mean_cover,
-                                group = Log_Presence,
-                                fill = Log_Presence)) +
+                                fill = Date,
+                                color = Date)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_errorbar(aes(ymin = mean_cover - se_cover,
                     ymax = mean_cover + se_cover),
                 size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
   scale_fill_manual(values = cbp) +
-  facet_grid(Shoreline_End ~.,) +
+  facet_grid(Shoreline_End ~ Log_Presence) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(0, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(0, 140)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Mean % Vegetation Cover Based On Presence of Log per Marsh Zone",
-    subtitle = "August 2023",
+    subtitle = "Comparing first survey (Jun 2022) to final survey (Aug 2023)",
     x = "Marsh Zone",
-    y ="Total Vegetated Cover (%)",
-    fill = "Log Presence",
+    y ="Total Vegetation Cover (%)",
+    fill = "Survey Date",
     caption = "*Error bars reflect standard error") +
   theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=16),
-        legend.title = element_text(face = "bold", size=15),
-        legend.text=element_text(size=15),
-        axis.text.x = element_text(size = 15),
-        axis.text.y = element_text(size = 13),
-        plot.title = element_text(face = "bold", size = 18),
-        plot.caption = element_text(size = 13),
-        plot.subtitle = element_text(size = 13),
-        strip.text = element_text(size = 18, color = "black"))
+  theme(axis.title = element_text(face = "bold", size=14),
+        legend.title = element_text(face = "bold", size=14),
+        legend.text=element_text(size=12),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_cover), 
+                vjust = -0.975, 
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_dodge(0.85),
+                color = "black",
+            size = 3.25)
+  
 
 
-LvNLplot
+TotalVeg_barplot
 ```
+
+
+
+
 
