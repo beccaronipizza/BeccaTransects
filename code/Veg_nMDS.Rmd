@@ -1,5 +1,5 @@
 ---
-title: "Veg nMDS"
+title: "Veg nMDS August 2023"
 author: "Becca Morris"
 date: "2024-02-06"
 output: html_document
@@ -13,16 +13,16 @@ library(ggplot2)
 library(ggpubr)
 library(vegan)
 #everything below is to install the latest version of ggvegan for plotting the nmds
-if (!require(devtools)) {           
-  install.packages("devtools")
-}
-devtools::install_github("gavinsimpson/ggvegan")
+#if (!require(devtools)) {           
+#  install.packages("devtools")
+#}
+#devtools::install_github("gavinsimpson/ggvegan")
 
 library(ggvegan)
 
 #everything below is to install the latest version of ggpubr for plotting the nmds
-if(!require(devtools)) install.packages("devtools")
-devtools::install_github("kassambara/ggpubr")
+#if(!require(devtools)) install.packages("devtools")
+#devtools::install_github("kassambara/ggpubr")
 
 library(ggpubr)
 
@@ -34,11 +34,11 @@ vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "D
 
 # 1. creating the main data frame:
 ```{r}
-
 VegDataNew <- vegdata %>% 
   mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus','Taraxacum', 'Coytote_Bush','BoMa', 'DiSp'), as.numeric) %>% 
   mutate_if(is.numeric, list(~replace_na(., 0))) %>%
   select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
+  filter(!(BaGr_Type_1 == '7' | BaGr_Type_2 == '7')) %>% #remove rows where BaGr is coded as log
   mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
   select(-BaGr_1, -BaGr_2) %>% 
   mutate(Total_Veg = 25-BaGr) %>%  #Total_veg is simply what is remaining after subtracting the bare ground
@@ -53,7 +53,9 @@ VegDataMerged <- full_join(VegDataNew, vegmetadata, by = "Transect_ID") %>%
   mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% 
   mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
   mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
-  mutate(across(everything(), ~replace(.x, is.nan(.x), 0)))
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>% 
+  mutate(SaPa_new = SaPa) %>%  #putting their original names back after the calculation above
+  mutate(SaDe_new = SaDe)
  
 
 
@@ -146,12 +148,12 @@ set.seed(19840217)
 
 ### Hellinger Method ###
 
-nmds_U <- metaMDS(VegDataSpecies.hel_U, autotransform = F, k = 2, trymax = 20) #autotransform = F so that it doesn't revert back to the default transformation *bc we are using the hellinger method.
+nmds_U <- metaMDS(VegDataSpecies.hel_U, autotransform = F, k = 2, trymax = 1000) #autotransform = F so that it doesn't revert back to the default transformation *bc we are using the hellinger method.
 nmds_U
 
-save(nmds_U, file ="../output_data/nmds_U.Rds")
+save(nmds_U, file ="../output_data/nmds_U_August2023.Rds")
 
-load("output_data/nmds_U.RData")
+load("output_data/nmds_U_August2023.Rds")
 ```
 
 ```{r}
@@ -167,12 +169,13 @@ set.seed(19840217)
 
 ## Hellinger Method ###
 
-nmds_M <- metaMDS(VegDataSpecies.hel_M, autotransform = F, k = 2, trymax = 100) #autotransform = F so that it doesn't revert back to the default transformation *bc we are using the hellinger method.
+nmds_M <- metaMDS(VegDataSpecies.hel_M, autotransform = F, k = 2, trymax = 1000)
+#autotransform = F so that it doesn't revert back to the default transformation *bc we are using the hellinger method.
 nmds_M
 
-save(nmds_M, file ="../output_data/nmds_M.Rds")
+save(nmds_M, file ="../output_data/nmds_M_August2023.Rds")
 
-load("output_data/nmds_M.RData")
+load("output_data/nmds_M_August2023.Rds")
 ```
 
 ```{r}
@@ -188,12 +191,12 @@ set.seed(19840217)
 
 ## Hellinger Method ###
 
-nmds_L <- metaMDS(VegDataSpecies.hel_L, autotransform = F, k = 2, trymax = 100) #autotransform = F so that it doesn't revert back to the default transformation *bc we are using the hellinger method.
+nmds_L <- metaMDS(VegDataSpecies.hel_L, autotransform = F, k = 2, trymax = 1000) #autotransform = F so that it doesn't revert back to the default transformation *bc we are using the hellinger method.
 nmds_L
 
-save(nmds_L, file ="../output_data/nmds_L.Rds")
+save(nmds_L, file ="../output_data/nmds_L_August2023.Rds")
 
-load("output_data/nmds_L.RData")
+load("output_data/nmds_L_August2023.RData")
 ```
 
 
@@ -203,6 +206,7 @@ load("output_data/nmds_L.RData")
 #Starting with Upper Zone:
 ```{r}
 ###  Plotting Hellinger method in base R ###
+nmds_U
 
 ordiplot(nmds_U)
 ordiplot(nmds_U, type = "t") #puts species name on plot
@@ -231,7 +235,7 @@ EWLNLplot <- ggplot() +
   #            alpha = 0.5,
   #             size = 0.6) +
                labs(title = "Upper Zone nMDS",
-                    subtitle = "stress = 0.10, bray") +
+                    subtitle = "stress = 0.1007133 , bray") +
   geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
   geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
   labs(title = "Upper Zone nMDS") +
@@ -260,8 +264,8 @@ ggplot() +
                              type ="closed"),
                color = "darkgray",
                size = 0.6) +
-               labs(title = "Upper Zone nMDS",
-                    subtitle = "stress = 0.100779, bray") +
+               labs(title = "Upper Zone nMDS - August 2023",
+                    subtitle = "stress = 0.1007133, bray") +
                theme_bw() +
   geom_text(data = subset(fort, score == 'species'),
             mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
@@ -298,8 +302,8 @@ p1 <- ggplot() +
             mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1),
             alpha = 0) +     #also set alpha = o here, too.
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p2
-  labs(title = "Upper Zone nMDS",
-       subtitle = "stress = 0.100779, bray") +
+  labs(title = "Upper Zone nMDS - August 2023",
+       subtitle = "stress = 0.1007133, bray") +
   theme_bw() +
   geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
   geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
@@ -324,14 +328,12 @@ p2 <- ggplot() +
                              type ="closed"),
                color = "darkgray",
                size = 0.6) +
-               #labs(title = "Upper Zone nMDS",
-                #    subtitle = "stress = 0.10, bray") +
                theme_bw() +
   geom_text(data = subset(fort, score == 'species'),
             mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p1
-  labs(title = "Upper Zone nMDS",
-       subtitle = "stress = 0.100779, bray") +
+  labs(title = "Upper Zone nMDS- August 2023",
+       subtitle = "stress = 0.1007133, bray") +
   geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
   geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
   theme(panel.grid.major = element_blank(),
@@ -354,11 +356,8 @@ p3 <- ggplot() +
              size = 4) +          #keep this detail outside of the aes() if you don't want it to show up in the legend
   scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p1 and p2
-  #labs(title = "Upper Zone nMDS",
-  #    subtitle = "stress = 0.100779, bray") +
   geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
   geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
-  
   theme_bw() +
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
@@ -394,6 +393,7 @@ adonis2(Total_Veg ~ Shoreline_End, data=VegDataMerged_mod_U)
 #Middle Zone
 ```{r}
 ###  Plotting Hellinger method in base R ###
+nmds_M 
 
 ordiplot(nmds_M)
 ordiplot(nmds_M, type = "t") #puts species name on plot
@@ -422,8 +422,8 @@ EWLNL_M_plot <- ggplot() +
   #             color = "darkgray",
   #            alpha = 0.5,
   #             size = 0.6) +
-               labs(title = "Middle Zone nMDS",
-                    subtitle = "stress = 0.07531825, bray") +
+               labs(title = "Middle Zone nMDS - August 2023",
+                    subtitle = "stress = 0.07720212, bray") +
   geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
   geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
   labs(title = "Middle Zone nMDS") +
@@ -452,8 +452,8 @@ ggplot() +
                              type ="closed"),
                color = "darkgray",
                size = 0.6) +
-               labs(title = "Middle Zone nMDS",
-                    subtitle = "stress = 0.07531825, bray") +
+               labs(title = "Middle Zone nMDS - August 2023",
+                    subtitle = "stress = 0.07720212, bray") +
                theme_bw() +
   geom_text(data = subset(fort, score == 'species'),
             mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
@@ -490,8 +490,8 @@ p1 <- ggplot() +
             mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1),
             alpha = 0) +     #also set alpha = o here, too.
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p2
-  labs(title = "Middle Zone nMDS",
-       subtitle = "stress = 0.07531825, bray") +
+  labs(title = "Middle Zone nMDS - August 2023",
+       subtitle = "stress = 0.07720212, bray") +
   theme_bw() +
   geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
   geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
@@ -518,15 +518,13 @@ p2 <- ggplot() +
                              type ="closed"),
                color = "darkgray",
                size = 0.6) +
-               #labs(title = "Upper Zone nMDS",
-                #    subtitle = "stress = 0.10, bray") +
                theme_bw() +
   geom_text(data = subset(fort, score == 'species'),
             mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p1
   scale_x_continuous(limits = c(-1, 1)) +
-  labs(title = "Middle Zone nMDS",
-       subtitle = "stress = 0.07531825, bray") +
+  labs(title = "Middle Zone nMDS - August 2023",
+       subtitle = "stress = 0.07720212, bray") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.background = element_blank(),
@@ -548,12 +546,8 @@ p3 <- ggplot() +
   scale_color_manual(values = cbp) +   #override base ggplot colors with colorblind friendly colors
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p1 and p2
   scale_x_continuous(limits = c(-1, 1)) +
-  #scale_x_(limits = -1, 1) +
-  #labs(title = "Upper Zone nMDS",
-  #    subtitle = "stress = 0.100779, bray") +
   geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
   geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
-  
   theme_bw() +
   theme(panel.grid.major = element_blank(), 
         panel.grid.minor = element_blank(),
@@ -576,6 +570,7 @@ ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
 #Lower Zone:
 ```{r}
 ###  Plotting Hellinger method in base R ###
+nmds_L
 
 ordiplot(nmds_L)
 ordiplot(nmds_L, type = "t") #puts species name on plot
@@ -605,7 +600,7 @@ EWLNL_L_plot <- ggplot() +
   #            alpha = 0.5,
   #             size = 0.6) +
   labs(title = "Lower Zone nMDS",
-  subtitle = "stress = 0.02575065 , bray") +
+  subtitle = "stress = 0.02604705  , bray") +
   geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
   geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
   
@@ -634,8 +629,8 @@ ggplot() +
                              type ="closed"),
                color = "darkgray",
                size = 0.6) +
-               labs(title = "Lower Zone nMDS",
-                    subtitle = "stress = 0.02575065, bray") +
+               labs(title = "Lower Zone nMDS - August 2023",
+                    subtitle = "stress = 0.02604705 , bray") +
                theme_bw() +
   geom_text(data = subset(fort, score == 'species'),
             mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
@@ -672,8 +667,8 @@ p1 <- ggplot() +
             mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1),
             alpha = 0) +     #also set alpha = o here, too.
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p2
-  labs(title = "Lower Zone nMDS",
-       subtitle = "stress = 0.02575065, bray") +
+  labs(title = "Lower Zone nMDS - August 2023",
+       subtitle = "stress = 0.02604705 , bray") +
   theme_bw() +
   geom_abline(intercept=0, slope=0, linetype = "dashed", size = 0.8, color = "gray")+
   geom_vline(aes(xintercept=0), linetype = "dashed", size = 0.8, color = "gray")+
@@ -700,15 +695,13 @@ p2 <- ggplot() +
                              type ="closed"),
                color = "darkgray",
                size = 0.6) +
-               #labs(title = "Upper Zone nMDS",
-                #    subtitle = "stress = 0.10, bray") +
                theme_bw() +
   geom_text(data = subset(fort, score == 'species'),
             mapping = aes(label=label, x=NMDS1*1.1, y=NMDS2*1.1)) +
   scale_y_continuous(limits=c(-2, 2)) +  #make the y=axis the same scale as the y-axis on plots p3 and p1
   scale_x_continuous(limits = c(-1, 1)) +
-  labs(title = "Lower Zone nMDS",
-       subtitle = "stress = 0.02575065, bray") +
+  labs(title = "Lower Zone nMDS - August 2023",
+       subtitle = "stress = 0.02604705, bray") +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.background = element_blank(),

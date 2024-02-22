@@ -24,16 +24,17 @@ vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "D
 ```{r}
 vegdata2 <- vegdata %>% 
   mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 
-              'Taraxacum', 'Coytote_Bush','BoMa'), as.numeric) %>% 
+              'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp'), as.numeric) %>% 
   mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  filter(!(BaGr_Type_1 == '7' | BaGr_Type_2 == '7')) %>% #remove rows where BaGr is coded as log
   select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
   mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
   select(-BaGr_1, -BaGr_2) %>% 
   mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
   #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
-  mutate(Date = paste0(Year, "-", Month)) %>% 
-  mutate(Total_Veg2 = rowSums(across(SpFo:LeTr))) %>% 
-  filter(!Total_Veg2 == 0)  #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count.
+  mutate(Date = paste0(Year, "-", Month)) #%>% 
+  #mutate(Total_Veg2 = rowSums(across(SpFo:LeTr))) %>% 
+  #filter(!Total_Veg2 == 0)  #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count.
 ```
 
 #### Using Full_Join to combine main data sheet and metadata sheet ####
@@ -53,6 +54,8 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
   mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
   mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
   mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>% 
+  mutate(SaPa = SaPa_new) %>%  #putting the new columns back to their original names
+  mutate(SaDe = SaDe_new) %>% 
   select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
 ```
 
@@ -77,7 +80,7 @@ vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presen
 #!!!!!!!!!!!!!!!!!!!!!!#
 # 5. Test for normality:
 
-# Upper Zone Normality:
+# Upper Zone Normality using the Total_Veg2 column created in step 1:
 ```{r}
 #QQ-Plot:
 qqnorm(vegdata_U$Total_Veg2, pch = 1, frame = FALSE)
@@ -140,3 +143,20 @@ anova(glm1, test = "F")
 
 ```
 
+
+# ################################################################################################################################ #
+
+#Analyzing Bare ground vs Total Veg using the "Total_Veg" column:
+```{r}
+#Question: Does Shoreline_End*Log_Presence*Zone affect how much veg/bare ground is present?
+  
+#need to create a new column that gives a "1" when veg is present and "0" when no veg is present"
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  mutate(Vegetation = +(Total_Veg>=1))
+
+vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  mutate(Vegetation = +(Total_Veg>=1))
+
+vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  mutate(Vegetation = +(Total_Veg>=1))
+```

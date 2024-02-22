@@ -149,14 +149,16 @@ ggplot(RTKpinschange_norefs_U, aes(`Sediment_Change`)) +
 
 qqnorm(RTKpinschange_norefs_U$Sediment_Change, main = "Normal Q-Q Plot for Sediment Change")
 
-hist(RTKpinschange_norefs_U$Sediment_Change)
+hist(RTKpinschange_norefs_U$Sediment_Change) #doesn't help
+hist(sqrt(RTKpinschange_norefs_U$Sediment_Change + 6)) #doesn't help
+hist((RTKpinschange_norefs_U$Sediment_Change + 6)^(1/3)) # no bueno
 
 #using summary statistics
 describe(RTKpinschange_norefs_U$Sediment_Change) #skew = 0.63	 and kurtosis = 0.82
 stat.desc(RTKpinschange_norefs_U$Sediment_Change, basic = FALSE, norm = TRUE) #skew.2SE = 0.77154878 and kurtosis.2SE = 0.51286600
-shapiro.test(RTKpinschange_norefs_U$Sediment_Change) # p= 0.05482 data is NOT normal!!
+shapiro.test(log10(RTKpinschange_norefs_U$Sediment_Change +6)) # p= 0.05482 data is NOT normal!!
 
-glm2 <- glm(Sediment_Change ~ Shoreline_End * Log_Presence, data = RTKpinschange_norefs_U, family = 'gaussian')
+glm2 <- glm((Sediment_Change) ~ Shoreline_End * Log_Presence, data = RTKpinschange_norefs_U, family = 'gaussian')
 
 plot(glm2) 
 

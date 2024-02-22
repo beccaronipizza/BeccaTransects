@@ -37,7 +37,7 @@ vegdatanew <- vegdata %>%
   mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% #combine all grasses into one column
   mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>% 
   select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) %>% #Total_veg is simply what is remaining after subtracting the bare ground
-  mutate(SaPa = SaPa_new) %>% #rename the newly created pickleweed columns from above back to to their original names
+  mutate(SaPa = SaPa_new) %>% #rename the newly created pickleweed columns from above back to their original name
   mutate(SaDe = SaDe_new) %>% 
   mutate(across(SpFo:SaDe, ~ .x*4)) %>% #makes everything into percentages
   mutate(Date = paste0(Year, "-", Month)) %>% 
@@ -251,7 +251,7 @@ SaSp_barplot
 # #################################################################################################################################### #
 #Creating a df for Total Veg BARPLOT:
 ```{r}
-TotalVeg <- vegdata_merged[(vegdata_merged$Species_code == 'Total_Veg' & vegdata_merged$Date == '2022-June' | vegdata_merged$Species_code == 'Total_Veg' &         vegdata_merged$Date == '2023-August'),] %>% 
+TotalVeg <- vegdata_merged[(vegdata_merged$Species_code == 'Total_Veg' & vegdata_merged$Date == '2022-June' | vegdata_merged$Species_code == 'Total_Veg' & vegdata_merged$Date == '2023-August'),] %>% 
   rename(Percent_Cover = Percent_cover) %>% 
   select(-c('Species_code','Fence_Presence', 'Pre-veg', 'Planted_cordgrass', 'Mud', 'Toeberm', 'Month', 'Year')) %>% 
   group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
