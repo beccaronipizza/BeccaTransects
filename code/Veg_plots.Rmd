@@ -263,6 +263,27 @@ TotalVeg <- vegdata_merged[(vegdata_merged$Species_code == 'Total_Veg' & vegdata
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
         Zone = factor(Zone, levels = c("U", "M", "L")),
          Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+
+
+## the code below is form the veg_stats file.  Might eb able to use snippets fo this to plot!!
+#calculating change in cover for total veg (where total can exceed 25) and then the mean change for each zone, shoreline end, and log presence::
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-June" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = final_count - initial_count) %>%
+  ungroup() %>% 
+  distinct() %>% 
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
 
 #Total Veg BARPLOT:

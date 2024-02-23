@@ -41,6 +41,7 @@ vegdata2 <- vegdata %>%
   rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
   mutate(Total_Veg2 = rowSums(across(SpFo:Grass), na.rm =T)) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
   mutate(Date = paste0(Year, "-", Month)) 
+  
   #filter(!Total_Veg2 == 0)  #remove all rows where total_veg is equal to 0
   
 ```
@@ -64,14 +65,28 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
 
 # Upper Zone:
 ```{r}
-vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),]
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] 
 
 
-#for Wim
-#vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U"),] %>% 
-  #filter(Transect_ID %in% c("C1-BW6","C1-BW4","C1-BW12", "C1-L11"))
-  
-  
+#calculating change in cover for total veg (where total can exceed 25) and then the mean change for each zone, shoreline end, and log presence:
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-June" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-June")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
 # Middle Zone:
 ```{r}
@@ -90,8 +105,8 @@ vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presen
 # Upper Zone Normality using the Total_Veg2 column created in step 1:
 ```{r}
 #QQ-Plot:
-qqnorm(vegdata_U$Total_Veg2, pch = 1, frame = FALSE)
-qqline(vegdata_U$Total_Veg2, col = "steelblue", lwd = 2)
+qqnorm(vegdata_U$mean_cover, pch = 1, frame = FALSE)
+qqline(vegdata_U$mean_cover, col = "steelblue", lwd = 2)
 
 # QQ gamma dist:
 set.seed(17)
@@ -106,7 +121,7 @@ vegdata_U$Total_Veg2 <- rchisq(2408,5)
 
 
 #histogram
-hist(vegdata_U$SpFo)
+hist(vegdata_U$mean_cover) 
 
 #since SaPa is a combo of Pickle Pups and the original SaPa column, I need to tell it to not exceed 25 where Sapa is > than 25.
 vegdata_U$SaPa[vegdata_U$SaPa > 25] <- 25
