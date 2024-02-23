@@ -91,10 +91,48 @@ vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presen
 # Middle Zone:
 ```{r}
 vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presence != "reference"),]
+
+vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-June" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-June")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
 # Lower Zone:
 ```{r}
 vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presence != "reference"),]
+
+vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-June" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-June")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
 
 
@@ -105,23 +143,11 @@ vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presen
 # Upper Zone Normality using the Total_Veg2 column created in step 1:
 ```{r}
 #QQ-Plot:
-qqnorm(vegdata_U$mean_cover, pch = 1, frame = FALSE)
-qqline(vegdata_U$mean_cover, col = "steelblue", lwd = 2)
-
-# QQ gamma dist:
-set.seed(17)
-vegdata_U$Total_Veg2 <- rgamma(2408,1)
-
-qqnorm(vegdata_U$Total_Veg2, pch = 1, frame = FALSE)
-qqline(vegdata_U$Total_Veg2, col = "steelblue", lwd = 2)
-
-# QQ Chi-square dist:
-set.seed(17)
-vegdata_U$Total_Veg2 <- rchisq(2408,5)  
-
+qqnorm(vegdata_U$count_difference, pch = 1, frame = FALSE)
+qqline(vegdata_U$count_difference, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_U$mean_cover) 
+hist(vegdata_U$count_difference) 
 
 #since SaPa is a combo of Pickle Pups and the original SaPa column, I need to tell it to not exceed 25 where Sapa is > than 25.
 vegdata_U$SaPa[vegdata_U$SaPa > 25] <- 25
@@ -132,21 +158,21 @@ hist(vegdata_U$SaPa)
 # Middle Zone Normality:
 ```{r}
 #QQ-Plot:
-qqnorm(vegdata_U$SaPa, pch = 1, frame = FALSE)
-qqline(vegdata_M$SaPa, col = "steelblue", lwd = 2)
+qqnorm(vegdata_M$count_difference, pch = 1, frame = FALSE)
+qqline(vegdata_M$count_difference, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_M$SpFo)
-hist(vegdata_U$SaPa)
+hist(vegdata_M$count_difference)
+hist(vegdata_U$count_difference)
 ```
 # Lower Zone Normality:
 ```{r}
 #QQ-Plot:
-qqnorm(vegdata_L$Total_Veg2, pch = 1, frame = FALSE)
-qqline(vegdata_L$Total_Veg2, col = "steelblue", lwd = 2)
+qqnorm(vegdata_L$count_difference, pch = 1, frame = FALSE)
+qqline(vegdata_L$count_difference, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_L$SpFo)
+hist(vegdata_L$count_difference)
 ```
 
 #### ANOVA: tests whether any of the group means are different from the overall mean of the data by checking the variance of each individual group against the overall variance of the data. If one or more groups falls outside the range of variation predicted by the null hypothesis (all group means are equal), then the test is statistically significant. 
