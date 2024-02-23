@@ -24,17 +24,25 @@ vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "D
 ```{r}
 vegdata2 <- vegdata %>% 
   mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 
-              'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp'), as.numeric) %>% 
+              'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp', 'AtPx', 'PoAr', 'AcMa', 'GrSt', 'MixedSeedlings','GrGR', 'Melilotus', 'MePo'), as.numeric) %>% 
   mutate_if(is.numeric, list(~replace_na(., 0))) %>%
   filter(!(BaGr_Type_1 == '7' | BaGr_Type_2 == '7')) %>% #remove rows where BaGr is coded as log
   select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% 
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
   mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
   select(-BaGr_1, -BaGr_2) %>% 
   mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
   #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
-  mutate(Date = paste0(Year, "-", Month)) #%>% 
-  #mutate(Total_Veg2 = rowSums(across(SpFo:LeTr))) %>% 
-  #filter(!Total_Veg2 == 0)  #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count.
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
+  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe')) %>% 
+  rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
+  mutate(Total_Veg2 = rowSums(across(SpFo:Grass), na.rm =T)) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
+  mutate(Date = paste0(Year, "-", Month)) 
+  #filter(!Total_Veg2 == 0)  #remove all rows where total_veg is equal to 0
+  
 ```
 
 #### Using Full_Join to combine main data sheet and metadata sheet ####
@@ -48,15 +56,7 @@ vegmetadata %>%
 # 3. Now to merge the two data frames together, combine pickleweed species into a single column, distirbute picklepups into SaPa and SaDe columns, combine grasses into one column, and remove the redunant columns:
 ```{r}
 vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>% 
-  select(-c(...9:...12)) %>% 
-  mutate(SaSp = SaPa + SaDe) %>% 
-  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% 
-  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
-  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
-  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>% 
-  mutate(SaPa = SaPa_new) %>%  #putting the new columns back to their original names
-  mutate(SaDe = SaDe_new) %>% 
-  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
+  select(-c(...9:...12)) 
 ```
 
 # 4. Now to break the data up into the three zones and remove the reference logs. 
@@ -65,6 +65,13 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
 # Upper Zone:
 ```{r}
 vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),]
+
+
+#for Wim
+#vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U"),] %>% 
+  #filter(Transect_ID %in% c("C1-BW6","C1-BW4","C1-BW12", "C1-L11"))
+  
+  
 ```
 # Middle Zone:
 ```{r}
@@ -97,20 +104,25 @@ qqline(vegdata_U$Total_Veg2, col = "steelblue", lwd = 2)
 set.seed(17)
 vegdata_U$Total_Veg2 <- rchisq(2408,5)  
 
-qqnorm(vegdata_U$Total_Veg2, pch = 1, frame = FALSE)
-qqline(vegdata_U$Total_Veg2, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_U$Total_Veg2)
+hist(vegdata_U$SpFo)
+
+#since SaPa is a combo of Pickle Pups and the original SaPa column, I need to tell it to not exceed 25 where Sapa is > than 25.
+vegdata_U$SaPa[vegdata_U$SaPa > 25] <- 25
+hist(vegdata_U$SaPa)
+
+
 ```
 # Middle Zone Normality:
 ```{r}
 #QQ-Plot:
-qqnorm(vegdata_M$Total_Veg2, pch = 1, frame = FALSE)
-qqline(vegdata_M$Total_Veg2, col = "steelblue", lwd = 2)
+qqnorm(vegdata_U$SaPa, pch = 1, frame = FALSE)
+qqline(vegdata_M$SaPa, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_M$Total_Veg2)
+hist(vegdata_M$SpFo)
+hist(vegdata_U$SaPa)
 ```
 # Lower Zone Normality:
 ```{r}
@@ -119,7 +131,7 @@ qqnorm(vegdata_L$Total_Veg2, pch = 1, frame = FALSE)
 qqline(vegdata_L$Total_Veg2, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_L$Total_Veg2)
+hist(vegdata_L$SpFo)
 ```
 
 #### ANOVA: tests whether any of the group means are different from the overall mean of the data by checking the variance of each individual group against the overall variance of the data. If one or more groups falls outside the range of variation predicted by the null hypothesis (all group means are equal), then the test is statistically significant. 
@@ -127,7 +139,7 @@ hist(vegdata_L$Total_Veg2)
 
 ```
 
-#### GLM:
+#### General GLM:
 
 #Upper Zone GLM:
 ```{r}
@@ -144,19 +156,150 @@ anova(glm1, test = "F")
 ```
 
 
+
+
+
+
 # ################################################################################################################################ #
 
-#Analyzing Bare ground vs Total Veg using the "Total_Veg" column:
-```{r}
-#Question: Does Shoreline_End*Log_Presence*Zone affect how much veg/bare ground is present?
-  
-#need to create a new column that gives a "1" when veg is present and "0" when no veg is present"
-vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] %>% 
-  mutate(Vegetation = +(Total_Veg>=1))
 
+#Binomial GLM
+
+#Analyzing bare ground vs Total Veg using the "Total_Veg" column and a binomial glm with logit/log odds description. Good for non-normal data:
+
+#Question: Does Shoreline_End*Log_Presence affect how much veg/bare ground is present? In other words, I want to test whether the catgorical variables, shoreline end and log presence, are independent. I will test vegetation first, followed by bare ground.
+
+#Vegetation:
+```{r}
+#need to replace zero's with NA:
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] %>% 
+   mutate(Vegetation = +(Total_Veg>=1))
+  
+  
 vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presence != "reference"),] %>% 
-  mutate(Vegetation = +(Total_Veg>=1))
+   mutate(Vegetation = +(Total_Veg>=1))
+  
 
 vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presence != "reference"),] %>% 
-  mutate(Vegetation = +(Total_Veg>=1))
+   mutate(Vegetation = +(Total_Veg>=1))
+  
+```
+#Upper Zone:
+
+
+#Running the glm with a binomial distribution:
+#First, a complex model taking interactions into account:
+```{r}
+BiVegGLM_U1 <- glm(Vegetation ~ Shoreline_End*Log_Presence, family=binomial (link = "logit"), data=vegdata_U)
+plot(BiVegGLM_U1)
+```
+#Next, a simpler model for only main effects:
+```{r}
+BiVegGLM_U2 <- glm(Vegetation ~ Shoreline_End+Log_Presence, family=binomial (link = "logit"), data=vegdata_U)
+```
+#Now, comparing the two models using a chi^2 test (Contingency test):
+```{r}
+#https://www.youtube.com/watch?v=KubK6hgMbvg
+
+#Chi^2 hypothesis:
+#Ho: No relationship exists on the categorical variables in the population; categorical variables are independent.Knowing the value of one DOES NOT predict the other.
+#Hi: Categorical variables are not independent. Knowing the value of one DOES predict the other variable.
+
+anova(BiVegGLM_U1, BiVegGLM_U2, test = "Chi") 
+#Chi^2 Results: 
+#Model "BiVegGLM_U2" has a p-value = 0.1769, so we must accept the null and reject the alternative hypothesis. 
+
+# ***The categorical variables (shoreline end and log presence) ARE independent of each other. We cannot predict veg in a quadrat based on Shoreline AND log presence.
+```
+
+```{r}
+summary(BiVegGLM_U2)$coefficients
+#Shoreline end and log presence main effects are both significant
+#Explanation of results: https://www.simonqueenborough.info/R/statistics/glm-binomial:
+#For categorical predictors, the coefficient estimate describes the change in the log odds for each level compared to the base level.
+
+# Add logistic fitted values back to dataframe as
+#  new column pred.vegetation
+```
+#Now creating confidence intervals in case I need them:
+```{r}
+confint(BiVegGLM_U2)
+```
+
+
+#Middle Binomial GLM:
+
+#Running the glm with a binomial distribution:
+#First, a complex model taking interactions into account:
+```{r}
+BiVegGLM_M1 <- glm(Vegetation ~ Shoreline_End*Log_Presence, family=binomial (link = "logit"), data=vegdata_M)
+```
+#Next, a simpler model for only main effects:
+```{r}
+BiVegGLM_M2 <- glm(Vegetation ~ Shoreline_End+Log_Presence, family=binomial (link = "logit"), data=vegdata_M)
+```
+#Now, comparing the two models using a chi^2 test (Contingency test):
+```{r}
+#Chi^2 hypothesis:
+#Ho: No relationship exists on the categorical variables in the population; categorical variables are independent. 
+#Hi: Categorical variables are not independent. 
+
+anova(BiVegGLM_M1, BiVegGLM_M2, test = "Chi") 
+#Chi^2 Results: 
+#Model "BiVegGLM_U2" has a p-value= 3.549e-13 ***, which means we accept the null hypothesis.
+
+#*** The categorical variables (shoreline end and log presence) are NOT independent of each other. We CAN predict the presence of veg based on shoreline end AND log presence.
+```
+#Now creating confidence intervals in case I need them:
+```{r}
+confint(BiVegGLM_M2)
+```
+
+
+# Lower Binomial GLM:
+
+#Running the glm with a binomial distribution:
+#First, a complex model taking interactions into account:
+```{r}
+BiVegGLM_L1 <- glm(Vegetation ~ Shoreline_End*Log_Presence, family=binomial (link = "logit"), data=vegdata_L)
+```
+#Next, a simpler model for only main effects:
+```{r}
+BiVegGLM_L2 <- glm(Vegetation ~ Shoreline_End+Log_Presence, family=binomial (link = "logit"), data=vegdata_L)
+```
+#Now, comparing the two models using a chi^2 test (Contingency test):
+```{r}
+#Chi^2 hypothesis:
+#Ho: No relationship exists on the categorical variables in the population; categorical variables are independent. 
+#Hi: Categorical variables are not independent. 
+
+anova(BiVegGLM_L1, BiVegGLM_L2, test = "Chi") 
+#Chi^2 Results: 
+#Model "BiVegGLM_L2" has a p-value= 0.1182, which means we reject the null hypothesis.
+
+#***The categorical variables (shoreline end and log presence) ARE independent of each other. We cannot predict veg in a quadrat based on Shoreline AND log presence.
+```
+#Now creating confidence intervals in case I need them:
+```{r}
+confint(BiVegGLM_M2)
+```
+
+
+
+# ############################################################################################################################################################################# #
+
+#Now I want to determine if I have differences in communities within the vegetation that is present:
+
+# Upper Zone:
+```{r}
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  
+```
+# Middle Zone:
+```{r}
+vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presence != "reference"),]
+```
+# Lower Zone:
+```{r}
+vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presence != "reference"),]
 ```
