@@ -10,6 +10,7 @@ library(viridisLite)
 library(lubridate)
 library(naniar) #allows you to use the replace_with_na_at()
 library(gridExtra)
+library(ggtext)
 ```
 
 ```{r}
@@ -84,7 +85,7 @@ SpFo <- vegdata_merged[(vegdata_merged$Species_code == 'SpFo' & vegdata_merged$D
 ```
 #set up the color-blind color palette
 ```{r}
-cbp1 <- c("#F0E442", "#CC79A7", "#0072B2","#D55E00", "#009E73", "#56B4E9","#E69F00", "#000000")
+cbp <- c("#F0E442", "#CC79A7", "#0072B2","#D55E00", "#009E73", "#56B4E9","#E69F00", "#000000")
 ```
 
 #SpFo BARPLOT:
@@ -188,7 +189,7 @@ SpFo_scatter
 ```
 
 # #################################################################################################################################### #
-#Creating a df just for SaSp for BARPLOT:
+#Creating a df just for SaPa for BARPLOT:
 ```{r}
 SaPa <- vegdata_merged[(vegdata_merged$Species_code == 'SaPa' & vegdata_merged$Date == '2022-June' | vegdata_merged$Species_code == 'SaPa' &         vegdata_merged$Date == '2023-August'),] %>% 
   rename(Percent_Pickleweed = Percent_cover) %>% 
@@ -337,7 +338,7 @@ vegdata2 <- vegdata %>%
   rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
   mutate(Date = paste0(Year, "-", Month)) %>% 
   mutate(across(SpFo:Grass, ~ .x*4)) %>% #makes everything into percentages
-  mutate(Total_Veg2 = rowSums(across(SpFo:Grass), na.rm =T)) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
+  mutate(Total_Veg2 = rowSums(across(SpFo:Grass), na.rm =T)) #%>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
   #filter(!Total_Veg2 == 0)  #remove all rows where total_veg is equal to 0
 
 vegmetadata %>% 
@@ -382,12 +383,13 @@ TotalVeg_change_barplot <- ggplot(TotalVeg_change,
   geom_errorbar(aes(ymin = mean_cover - se_cover,
                     ymax = mean_cover + se_cover),
                 size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
   facet_grid(Log_Presence ~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
   coord_cartesian(ylim = c(-10, 100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
-    title = "Mean % Change in Vegetation Cover",
+    title = "Mean % Change in Total Vegetation Cover",
     subtitle = "August 2022 to August 2023",
     x = "Marsh Zone",
     y ="Total Vegetation Cover (%)",
@@ -410,7 +412,7 @@ TotalVeg_change_barplot <- ggplot(TotalVeg_change,
   geom_text(aes(label = mean_cover), #geom text is for the labels over the bars
                 vjust = -2.5,  #higher values shift text down
                 hjust = 0.5, #higher values shift text horizontally left
-                position = position_dodge(0.10),
+                position = position_stack(),
                 color = "black",
             size = 3.25)
 
@@ -443,6 +445,7 @@ SaPa_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>%
         Zone = factor(Zone, levels = c("U", "M", "L")),
          Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
+
 ```{r}
 SaPa_change_barplot <- ggplot(SaPa_change, 
                         mapping = aes(x = Zone,
@@ -453,18 +456,19 @@ SaPa_change_barplot <- ggplot(SaPa_change,
   geom_errorbar(aes(ymin = mean_cover - se_cover,
                     ymax = mean_cover + se_cover),
                 size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
   facet_grid(Log_Presence ~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(-10, 30)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(-15, 30)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
-    title = "Mean % Change in Sarcocornia pacifica Cover",
+    title = "Mean % Change in *Sarcocornia pacifica* Cover",
     subtitle = "August 2022 to August 2023",
     x = "Marsh Zone",
     y ="Total Vegetation Cover (%)",
     fill = "Marsh Zone",
     caption = "*Error bars reflect standard error",
-    tag = "Veg_plots.Rmd-TotalVeg_change_barplot") +
+    tag = "Veg_plots.Rmd-SaPa_change_barplot") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=14),
         #legend.title = element_text(face = "bold", size=14),
@@ -478,16 +482,87 @@ SaPa_change_barplot <- ggplot(SaPa_change,
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_text(aes(label = mean_cover), #geom text is for the labels over the bars
-                vjust = -2.5,  #higher values shift text down
+  geom_text(aes(label = mean_cover, y = mean_cover + se_cover), #geom text is for the labels over the bars
+                vjust = -1,  #higher values shift text down
                 hjust = 0.5, #higher values shift text horizontally left
-                position = position_dodge(0.10),
+                position = position_stack(),
                 color = "black",
             size = 3.25)
 
 SaPa_change_barplot
 ```
 
+# ##################################################################################################################################################### #
+
+#SpFo CHANGE BARPLOT
+
+```{r}
+#new
+SpFo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SpFo),
+         final_count = last(SpFo),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
 
 
+```{r}
+SpFo_change_barplot <- ggplot(SpFo_change, 
+                        mapping = aes(x = Zone,
+                                y = mean_cover,
+                                fill = Zone,
+                                color =Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Log_Presence ~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-5, 50)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Change in *Spartina foliosa* Cover",
+    subtitle = "August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+    fill = "Marsh Zone",
+    caption = "*Error bars reflect standard error",
+    tag = "Veg_plots.Rmd-SpFo_change_barplot") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=14),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_cover, y = mean_cover + se_cover), #geom text is for the labels over the bars
+                vjust = -1,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+            size = 3.25)
+
+SpFo_change_barplot
+```
 

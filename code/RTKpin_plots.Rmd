@@ -99,29 +99,34 @@ RTKpinschangeLvNL <- RTKpins %>%
   mutate(LowerDiff = ((last(lower) - first(lower))*-1)*30.48) %>% 
   select(-c("Date", "Year", "Month", "upper", "middle", "lower")) %>% 
   distinct() %>%  #this removes repeated values for each month's calculation
-  mutate(Shoreline_End = factor(Shoreline_End, levels = c("east", "west"))) %>%
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east"))) %>%
   pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>% 
   group_by(Shoreline_End, Pin_Location, Log_Presence) %>% 
   summarize(mean_difference = mean(Sediment_Change, na.rm = TRUE),
             sd_difference = sd(Sediment_Change, na.rm = TRUE),
             n_difference = n()) %>% 
-  mutate(se_difference = sd_difference/sqrt(n_difference))
+  mutate(se_difference = sd_difference/sqrt(n_difference)) %>% 
+  mutate(across(where(is.numeric), ~round(., 2)))
+  
 
 
 
-cbp2 <- c("#CC79A7","#56B4E9", "#0072B2", "#D55E00", "#009E73", "#56B4E9", "#F0E442" , "#E69F00", "#000000")
+cbp2 <- c("#D55E00", "#009E73", "#56B4E9","#CC79A7","#56B4E9", "#0072B2", "#F0E442" , "#E69F00", "#000000")
+```
 
-
-RTKpinLvNLplot <- ggplot(RTKpinschangeLvNL, aes(x= Pin_Location, y= mean_difference, 
-                                                       group = Log_Presence,
-                                                       fill= Log_Presence)) +
+```{r}
+RTKpinLvNLplot <- ggplot(RTKpinschangeLvNL, 
+                         aes(x= Pin_Location, 
+                             y= mean_difference, 
+                             color = Pin_Location,
+                             fill= Pin_Location)) +
   geom_hline(yintercept=0, linetype =1, color = "black") +
   geom_col(position = position_dodge(0.87), color = "black", width = 0.85) +
-  geom_errorbar(aes(
-    ymin= mean_difference-se_difference, ymax= mean_difference+se_difference), size = 0.5, 
+  geom_errorbar(aes(ymin= mean_difference-se_difference, ymax= mean_difference+se_difference), size = 0.5, 
     position = position_dodge(0.9), color= "black", width= .1) +
-  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff")) +  #labels renames the columns on the x-acis and limits sets the order in which each is laid out on the x axis
-  facet_grid(Shoreline_End ~.,) +
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff")) +  #labels renames the columns on the x-axis and limits sets the order in which each is laid out on the x axis
+  coord_cartesian(ylim = c(-10, 10)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  facet_grid(Log_Presence ~ Shoreline_End) +
   scale_fill_manual(values = cbp2) +
   labs(
     title = "RTK Measurement: Mean Change in Sediment Pin Length ",
@@ -129,18 +134,27 @@ RTKpinLvNLplot <- ggplot(RTKpinschangeLvNL, aes(x= Pin_Location, y= mean_differe
     y = "Mean Change (cm)",
     x = "   Pin Location Relative to Transect Marsh Zone",
     fill= "Log Presence",
-    caption = "*Error bars reflect standard error") +
+    caption = "*Error bars reflect standard error   *n=10 west/log, n=7 west/no log, n=11 east/log, n=9 east/no log",
+    tag = "RTKpin_plots.Rmd-RTK_change_barplot") +
   theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=17),
-        legend.title = element_text(face = "bold", size=13),
-        legend.text=element_text(size=10),
-        axis.text.x = element_text(size = 12),
-        axis.text.y = element_text(size = 14),
-        plot.title = element_text(face = "bold", size = 16),
-        plot.subtitle = element_text(size = 12),
-        plot.caption = element_text(size = 12, hjust = 0.1),
-        panel.border = element_rect(color = "black", fill = NA, size = 0.5),
-        strip.text = element_text(size = 18, color = "black"))                           
+  theme(axis.title = element_text(face = "bold", size=14),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_difference), #geom text is for the labels over the bars
+                vjust = -2,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),,
+                color = "black",
+            size = 3.25)   
 
 RTKpinLvNLplot
 ```

@@ -65,19 +65,20 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
 
 # Upper Zone:
 ```{r}
-vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] 
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),]  %>% 
+  filter(Date == "2023-August") 
 
 
 #calculating change in cover for total veg (where total can exceed 25) and then the mean change for each zone, shoreline end, and log presence:
 vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] %>% 
-  filter(Date == "2022-June" | Date == "2023-August") %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>% 
   group_by(Transect_ID, Quadrat) %>% 
   arrange(Date) %>% #arrange by date so the calculations can be made below
   mutate(initial_count = first(Total_Veg2),
          final_count = last(Total_Veg2),
          count_difference = (final_count - initial_count)) %>%
   ungroup() %>% 
-  filter(!(Date == "2022-June")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
   group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
   summarize(mean_cover = mean(count_difference, na.rm = TRUE),
             sd_cover = sd(count_difference, na.rm = TRUE),
@@ -90,19 +91,20 @@ vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presen
 ```
 # Middle Zone:
 ```{r}
-vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presence != "reference"),]
+vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2023-August") 
 
 vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presence != "reference"),] %>% 
-  filter(Date == "2022-June" | Date == "2023-August") %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>% 
   group_by(Transect_ID, Quadrat) %>% 
   arrange(Date) %>% #arrange by date so the calculations can be made below
   mutate(initial_count = first(Total_Veg2),
          final_count = last(Total_Veg2),
          count_difference = (final_count - initial_count)) %>%
   ungroup() %>% 
-  filter(!(Date == "2022-June")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
   group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
-  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   # !!!!!!!!!!!!!   from here down you calculate summary statistics
             sd_cover = sd(count_difference, na.rm = TRUE),
             n_cover = n()) %>% 
   mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
@@ -113,17 +115,18 @@ vegdata_M <- vegdatamerged[(vegdatamerged$Zone == "M" & vegdatamerged$Log_Presen
 ```
 # Lower Zone:
 ```{r}
-vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presence != "reference"),]
+vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2023-August") 
 
 vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presence != "reference"),] %>% 
-  filter(Date == "2022-June" | Date == "2023-August") %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>% 
   group_by(Transect_ID, Quadrat) %>% 
   arrange(Date) %>% #arrange by date so the calculations can be made below
   mutate(initial_count = first(Total_Veg2),
          final_count = last(Total_Veg2),
          count_difference = (final_count - initial_count)) %>%
   ungroup() %>% 
-  filter(!(Date == "2022-June")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
   group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
   summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
             sd_cover = sd(count_difference, na.rm = TRUE),
@@ -147,7 +150,7 @@ qqnorm(vegdata_U$count_difference, pch = 1, frame = FALSE)
 qqline(vegdata_U$count_difference, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_U$count_difference) 
+hist(vegdata_U$Total_Veg2) 
 
 #since SaPa is a combo of Pickle Pups and the original SaPa column, I need to tell it to not exceed 25 where Sapa is > than 25.
 vegdata_U$SaPa[vegdata_U$SaPa > 25] <- 25
@@ -162,8 +165,8 @@ qqnorm(vegdata_M$count_difference, pch = 1, frame = FALSE)
 qqline(vegdata_M$count_difference, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_M$count_difference)
-hist(vegdata_U$count_difference)
+hist(vegdata_M$Total_Veg2)
+
 ```
 # Lower Zone Normality:
 ```{r}
@@ -172,7 +175,7 @@ qqnorm(vegdata_L$count_difference, pch = 1, frame = FALSE)
 qqline(vegdata_L$count_difference, col = "steelblue", lwd = 2)
 
 #histogram
-hist(vegdata_L$count_difference)
+hist(vegdata_L$Total_Veg2)
 ```
 
 #### ANOVA: tests whether any of the group means are different from the overall mean of the data by checking the variance of each individual group against the overall variance of the data. If one or more groups falls outside the range of variation predicted by the null hypothesis (all group means are equal), then the test is statistically significant. 
