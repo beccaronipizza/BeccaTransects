@@ -29,7 +29,7 @@ library(ggpubr)
 setwd("~/GitHub/BeccaTransects/data")
 
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
-vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2")
 ```
 
 # 1. creating the main data frame:
@@ -37,8 +37,8 @@ vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "D
 VegDataNew <- vegdata %>% 
   mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus','Taraxacum', 'Coytote_Bush','BoMa', 'DiSp'), as.numeric) %>% 
   mutate_if(is.numeric, list(~replace_na(., 0))) %>%
-  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
   filter(!(BaGr_Type_1 == '7' | BaGr_Type_2 == '7')) %>% #remove rows where BaGr is coded as log
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
   mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
   select(-BaGr_1, -BaGr_2) %>% 
   mutate(Total_Veg = 25-BaGr) %>%  #Total_veg is simply what is remaining after subtracting the bare ground
@@ -153,7 +153,7 @@ nmds_U
 
 save(nmds_U, file ="../output_data/nmds_U_August2023.Rds")
 
-load("output_data/nmds_U_August2023.Rds")
+load("../output_data/nmds_U_August2023.Rds")
 ```
 
 ```{r}
@@ -175,7 +175,7 @@ nmds_M
 
 save(nmds_M, file ="../output_data/nmds_M_August2023.Rds")
 
-load("output_data/nmds_M_August2023.Rds")
+load("../output_data/nmds_M_August2023.Rds")
 ```
 
 ```{r}
@@ -196,7 +196,7 @@ nmds_L
 
 save(nmds_L, file ="../output_data/nmds_L_August2023.Rds")
 
-load("output_data/nmds_L_August2023.RData")
+load("../output_data/nmds_L_August2023.RData")
 ```
 
 
