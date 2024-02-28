@@ -1,0 +1,67 @@
+---
+title: "Veg Beta Diversity"
+author: "Becca Morris"
+date: "2024-02-27"
+output: html_document
+---
+
+```{r}
+library(adespatial)
+library(ade4)
+library(readxl)
+library(tidyverse)
+library(dplyr)
+```
+
+#load in the data
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2")
+```
+# 1. creating the main data frame:
+```{r}
+VegDataNew <- vegdata %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus','Taraxacum', 'Coytote_Bush','BoMa', 'DiSp'), as.numeric) %>% 
+  mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  filter(!(BaGr_Type_1 == '7' | BaGr_Type_2 == '7')) %>% #remove rows where BaGr is coded as log
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_veg is simply what is remaining after subtracting the bare ground
+  #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%    *I think we only want count data here, not percentages
+  mutate(Total_Veg2 = rowSums(across(SpFo:LeTr))) %>%  #strictly count data here
+  filter(!Total_Veg2 == 0) %>% #get rid of all rows that equal 0
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% 
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe', 'SaSp', 'BaGr')) %>% #Don't need these columns
+  rename(SaPa = SaPa_new) %>%  #putting their original names back after the calculation above
+  rename(SaDe = SaDe_new) %>% 
+  mutate(across(c(34:35), ~round(.,0))) %>% 
+  pivot_longer(cols = SpFo:Grass,
+               names_to = "Species_code",
+               values_to = "Count_cover") %>% 
+  mutate(Date = paste0(Year, "-", Month)) 
+```
+#I want to clean up the metadata sheet:
+```{r}
+vegmetadata %>% 
+  select(Transect_ID, Shoreline_End, Log_Presence) 
+```
+
+#I want to combine the veg data and veg metadata df's togetherand remove the extranneous columns:
+```{r}
+VegDataMerged <- full_join(VegDataNew, vegmetadata, by = "Transect_ID") %>% 
+  select(-c(...9:...12)) 
+  
+```
+
+#Calculate beta diversity components for jaccard
+```{r}
+
+```
+

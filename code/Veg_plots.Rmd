@@ -40,7 +40,7 @@ vegdata2 <- vegdata %>%
   mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
   #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
   mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
-  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe')) %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe', 'SaSp')) %>%  #removed SaSp so it would not be calculated as total veg in addition tot he SaPa and SaDe columns
   rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
   mutate(Date = paste0(Year, "-", Month)) %>% 
   mutate(across(SpFo:Grass, ~ .x*4)) %>% #makes everything into percentages
@@ -339,7 +339,7 @@ vegdata2 <- vegdata %>%
   mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
   #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
   mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
-  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe')) %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe','SaSp')) %>% #removed SaSp column so it would not be counted as part of 'Total_Veg2' column in addition to the SaPa and SaDe columns
   rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
   mutate(Date = paste0(Year, "-", Month)) %>% 
   mutate(across(SpFo:Grass, ~ .x*4)) %>% #makes everything into percentages
@@ -569,5 +569,320 @@ SpFo_change_barplot <- ggplot(SpFo_change,
 
 SpFo_change_barplot
 ```
+# ################################################################################################################################################### #
 
+#SaDe CHANGE BARPLOT:
+```{r}
+#new
+SaDe_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SaDe),
+         final_count = last(SaDe),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the August2022 count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+```{r}
+SaDe_change_barplot <- ggplot(SaDe_change, 
+                        mapping = aes(x = Zone,
+                                y = mean_cover,
+                                fill = Zone,
+                                color =Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Log_Presence ~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-5, 50)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Change in *Salicornia depressa* Cover",
+    subtitle = "August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+    fill = "Marsh Zone",
+    caption = "*Error bars reflect standard error",
+    tag = "Veg_plots.Rmd-SaDe_change_barplot") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=14),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_cover, y = mean_cover + se_cover), #geom text is for the labels over the bars
+                vjust = -1,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+            size = 3.25)
+
+SaDe_change_barplot
+```
+
+# ################################################################################################################################################### #
+
+#CoCo CHANGE BARPLOT:
+```{r}
+#new
+CoCo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(CoCo),
+         final_count = last(CoCo),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the August2022 count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+```{r}
+CoCo_change_barplot <- ggplot(CoCo_change, 
+                        mapping = aes(x = Zone,
+                                y = mean_cover,
+                                fill = Zone,
+                                color =Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Log_Presence ~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-5, 50)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Change in *Cotula coronopifilia* Cover",
+    subtitle = "August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+    fill = "Marsh Zone",
+    caption = "*Error bars reflect standard error",
+    tag = "Veg_plots.Rmd-SaDe_change_barplot") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=14),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_cover, y = mean_cover + se_cover), #geom text is for the labels over the bars
+                vjust = -1,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+            size = 3.25)
+
+CoCo_change_barplot
+```
+# ################################################################################################################################################### #
+
+#SpMa CHANGE BARPLOT:
+```{r}
+#new
+SpMa_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SpMa),
+         final_count = last(SpMa),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the August2022 count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+```{r}
+SpMa_change_barplot <- ggplot(SpMa_change, 
+                        mapping = aes(x = Zone,
+                                y = mean_cover,
+                                fill = Zone,
+                                color =Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Log_Presence ~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-5, 50)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Change in *Spergularia spp.* Cover",
+    subtitle = "August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+    fill = "Marsh Zone",
+    caption = "*Error bars reflect standard error",
+    tag = "Veg_plots.Rmd-SpMa_change_barplot") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=14),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_cover, y = mean_cover + se_cover), #geom text is for the labels over the bars
+                vjust = -1,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+            size = 3.25)
+
+SpMa_change_barplot
+```
+
+#RELATIVE SpFO Barplot
+```{r}
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2")
+```
+
+```{r}
+vegdata2 <- vegdata %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp', 'AtPx', 'PoAr', 'AcMa', 'GrSt', 'MixedSeedlings','GrGR', 'Melilotus', 'MePo'), as.numeric) %>% 
+  mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  filter(!(BaGr_Type_1 == '7' | BaGr_Type_2 == '7')) %>% #remove rows where BaGr is coded as log
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% 
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
+  #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
+  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe')) %>% 
+  rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
+  mutate(Total_Veg2 = rowSums(across(SpFo:Grass), na.rm =T)) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
+  mutate(Date = paste0(Year, "-", Month)) 
+```
+
+```{r}
+#I removed SaSp column from 'vegdatamerged'  df (at the top ^) so that it would not be included in the 'Total_Veg2' calculation
+
+relative <- vegdatamerged %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>% 
+  mutate(across(c(7:34), ~na_if(., 0))) %>% 
+  mutate(rel_SpFo = (SpFo/Total_Veg2)*100) %>% 
+  mutate(rel_SaPa = (SaPa/Total_Veg2)*100) %>%
+  mutate(rel_SaDe = (SaDe/Total_Veg2)*100) %>% 
+  mutate(across(c(46:48), ~round(.,1)))
+  
+  
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SpFo),
+         final_count = last(SpFo),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the August2022 count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) 
+    
+    
+```
+
+```{r}
+rel_SpFo_barplot <- ggplot(relative, 
+                        mapping = aes(x = Zone,
+                                y = rel_SpFo,
+                                fill = Zone,
+                                color =Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(Log_Presence ~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-15, 30)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Change in *Sarcocornia pacifica* Cover",
+    subtitle = "August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+    fill = "Marsh Zone",
+    caption = "*Error bars reflect standard error",
+    tag = "Veg_plots.Rmd-SaPa_change_barplot") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=14),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_cover, y = mean_cover + se_cover), #geom text is for the labels over the bars
+                vjust = -1,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+            size = 3.25)
+
+rel_SpFo_barplot
+```
 

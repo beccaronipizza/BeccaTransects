@@ -12,19 +12,22 @@ library(ggplot2)
 library(broom)
 library(AICcmodavg)
 library(glmmTMB)
+library(lme4)
+library(bbmle)
+library(mvabund)  #allows you to run meanvar.plot() 
+
 
 setwd("~/GitHub/BeccaTransects/data")
 
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
-vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2")
 ```
 
 #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
 # 1. creating the main data frame:
 ```{r}
 vegdata2 <- vegdata %>% 
-  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 
-              'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp', 'AtPx', 'PoAr', 'AcMa', 'GrSt', 'MixedSeedlings','GrGR', 'Melilotus', 'MePo'), as.numeric) %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp', 'AtPx', 'PoAr', 'AcMa', 'GrSt', 'MixedSeedlings','GrGR', 'Melilotus', 'MePo'), as.numeric) %>% 
   mutate_if(is.numeric, list(~replace_na(., 0))) %>%
   filter(!(BaGr_Type_1 == '7' | BaGr_Type_2 == '7')) %>% #remove rows where BaGr is coded as log
   select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
@@ -37,10 +40,11 @@ vegdata2 <- vegdata %>%
   mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
   #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
   mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
-  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe')) %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe', 'SaSp')) %>%  #removed SaSp so it would not be calculated as total veg in addition tot he SaPa and SaDe columns)) %>% 
   rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
   mutate(Total_Veg2 = rowSums(across(SpFo:Grass), na.rm =T)) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
   mutate(Date = paste0(Year, "-", Month)) 
+  
   
   #filter(!Total_Veg2 == 0)  #remove all rows where total_veg is equal to 0
   
@@ -57,8 +61,29 @@ vegmetadata %>%
 # 3. Now to merge the two data frames together, combine pickleweed species into a single column, distirbute picklepups into SaPa and SaDe columns, combine grasses into one column, and remove the redunant columns:
 ```{r}
 vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>% 
-  select(-c(...9:...12)) 
+  select(-c(...9:...12)) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")), #need to set these as factor to run a glmm
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
+
+
+#GLMM attempt:
+
+#since the same transects are measured repeatedly, the transects are used as a random effect
+```{r}
+hist(vegdatamerged$Total_Veg2)
+#QQ-Plot:
+qqnorm(vegdatamerged$Total_Veg2, pch = 1, frame = FALSE)
+qqline(vegdatamerged$Total_Veg2, col = "steelblue", lwd = 2)
+
+#attempting to use mvabund to make a mean vs variance plot ##cant figure out how to work yet
+tikus <- data("tikus")
+vegdata_mvabund <- mvabund(vegdatamerged$Total_Veg2)
+meanvar.plot(vegdata_mvabund)
+```
+
+
 
 # 4. Now to break the data up into the three zones and remove the reference logs. 
 # *The middle zone contains logs, so I'll need to make the log location's NA's:
@@ -145,6 +170,8 @@ vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presen
 
 # Upper Zone Normality using the Total_Veg2 column created in step 1:
 ```{r}
+#change variable based on which dataset youare using!!
+
 #QQ-Plot:
 qqnorm(vegdata_U$count_difference, pch = 1, frame = FALSE)
 qqline(vegdata_U$count_difference, col = "steelblue", lwd = 2)
@@ -183,7 +210,7 @@ hist(vegdata_L$Total_Veg2)
 
 ```
 
-#### General GLM:
+#### General GLM:  NO GOOD FOR MY DATA
 
 #Upper Zone GLM:
 ```{r}
@@ -209,9 +236,9 @@ anova(glm1, test = "F")
 
 #Binomial GLM
 
-#Analyzing bare ground vs Total Veg using the "Total_Veg" column and a binomial glm with logit/log odds description. Good for non-normal data:
+#Analyzing bare ground vs Total Veg using the "Total_Veg" and BaGr" columns and a binomial glm with logit/log odds description. Good for non-normal data:
 
-#Question: Does Shoreline_End*Log_Presence affect how much veg/bare ground is present? In other words, I want to test whether the catgorical variables, shoreline end and log presence, are independent. I will test vegetation first, followed by bare ground.
+#Question: Does Shoreline_End*Log_Presence affect how much veg/bare ground is present? 
 
 #Vegetation:
 ```{r}
@@ -240,6 +267,7 @@ plot(BiVegGLM_U1)
 #Next, a simpler model for only main effects:
 ```{r}
 BiVegGLM_U2 <- glm(Vegetation ~ Shoreline_End+Log_Presence, family=binomial (link = "logit"), data=vegdata_U)
+plot(BiVegGLM_U2)
 ```
 #Now, comparing the two models using a chi^2 test (Contingency test):
 ```{r}
@@ -251,9 +279,9 @@ BiVegGLM_U2 <- glm(Vegetation ~ Shoreline_End+Log_Presence, family=binomial (lin
 
 anova(BiVegGLM_U1, BiVegGLM_U2, test = "Chi") 
 #Chi^2 Results: 
-#Model "BiVegGLM_U2" has a p-value = 0.1769, so we must accept the null and reject the alternative hypothesis. 
+#Model "BiVegGLM_U2" has a p-value = 0.08159, so we model 2 is more appropriate. 
 
-# ***The categorical variables (shoreline end and log presence) ARE independent of each other. We cannot predict veg in a quadrat based on Shoreline AND log presence.
+# ***The categorical variables (shoreline end and log presence) ARE independent of each other. ie. Use model 2.
 ```
 
 ```{r}
@@ -269,6 +297,7 @@ summary(BiVegGLM_U2)$coefficients
 ```{r}
 confint(BiVegGLM_U2)
 ```
+
 
 
 #Middle Binomial GLM:
@@ -290,14 +319,15 @@ BiVegGLM_M2 <- glm(Vegetation ~ Shoreline_End+Log_Presence, family=binomial (lin
 
 anova(BiVegGLM_M1, BiVegGLM_M2, test = "Chi") 
 #Chi^2 Results: 
-#Model "BiVegGLM_U2" has a p-value= 3.549e-13 ***, which means we accept the null hypothesis.
+#Model "BiVegGLM_U2" has a p-value= 4.811e-14 ***, which means we accept the null hypothesis.
 
-#*** The categorical variables (shoreline end and log presence) are NOT independent of each other. We CAN predict the presence of veg based on shoreline end AND log presence.
+#*** The categorical variables (shoreline end and log presence) are NOT independent of each other. We must investigate the mixed effects of the two. ie. Use model 2.
 ```
 #Now creating confidence intervals in case I need them:
 ```{r}
 confint(BiVegGLM_M2)
 ```
+
 
 
 # Lower Binomial GLM:
@@ -319,9 +349,9 @@ BiVegGLM_L2 <- glm(Vegetation ~ Shoreline_End+Log_Presence, family=binomial (lin
 
 anova(BiVegGLM_L1, BiVegGLM_L2, test = "Chi") 
 #Chi^2 Results: 
-#Model "BiVegGLM_L2" has a p-value= 0.1182, which means we reject the null hypothesis.
+#Model "BiVegGLM_L2" has a p-value= 0.5867, which means we reject the null hypothesis.
 
-#***The categorical variables (shoreline end and log presence) ARE independent of each other. We cannot predict veg in a quadrat based on Shoreline AND log presence.
+#***The categorical variables (shoreline end and log presence) ARE independent of each other.  ie. Use model 1.
 ```
 #Now creating confidence intervals in case I need them:
 ```{r}
@@ -333,6 +363,20 @@ confint(BiVegGLM_M2)
 # ############################################################################################################################################################################# #
 
 #Now I want to determine if I have differences in communities within the vegetation that is present:
+
+#need to make new dataframe where 0's are NA's, and add a new column for relative cover:
+```{r}
+relative <- vegdatamerged %>% 
+  mutate(across(c(7:38), ~na_if(., 0))) %>% 
+  mutate(rel_SpFo = SpFo/Total_Veg) %>% 
+  mutate(rel_SaPa = SaPa/Total_Veg) %>%
+  mutate(rel_SaSp = SaSp/Total_Veg)
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(across(c(7:38), ~na_if(., 0)))  
+  
+
+```
+
 
 # Upper Zone:
 ```{r}
