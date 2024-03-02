@@ -4,8 +4,7 @@ author: "Becca Morris"
 date: "2024-02-03"
 output: html_document
 ---
-
-```{r setup, include=FALSE}
+```{r}
 library(readxl)
 library(tidyverse)
 library(ggplot2)
@@ -14,9 +13,12 @@ library(AICcmodavg)
 library(glmmTMB)
 library(lme4)
 library(bbmle)
-library(mvabund)  #allows you to run meanvar.plot() 
+library(pscl)
+library(dplyr)
+```
 
 
+```{r}
 setwd("~/GitHub/BeccaTransects/data")
 
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
@@ -29,11 +31,14 @@ vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "D
 vegdata2 <- vegdata %>% 
   mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp', 'AtPx', 'PoAr', 'AcMa', 'GrSt', 'MixedSeedlings','GrGR', 'Melilotus', 'MePo'), as.numeric) %>% 
   mutate_if(is.numeric, list(~replace_na(., 0))) %>%
-  filter(!(BaGr_Type_1 == '7' | BaGr_Type_2 == '7')) %>% #remove rows where BaGr is coded as log
   select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
   mutate(SaSp = SaPa + SaDe) %>% 
-  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>%      #combine and distribute picklepup category amongst the two species
   mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(across(c('SaPa_new', 'SaDe_new'),(~replace_na(., 0)))) %>%   #where the calculations above = 0, R was turning them into NaN's
+  mutate(across(c('SaPa_new', 'SaDe_new'), ~round(., 0))) %>% 
+  mutate(SaPa_new = if_else(SaPa_new > 25, 25, SaPa_new),
+         SaDe_new = if_else(SaDe_new > 25, 25, SaDe_new)) %>% 
   mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
   mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
   select(-BaGr_1, -BaGr_2) %>% 
@@ -44,10 +49,6 @@ vegdata2 <- vegdata %>%
   rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
   mutate(Total_Veg2 = rowSums(across(SpFo:Grass), na.rm =T)) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
   mutate(Date = paste0(Year, "-", Month)) 
-  
-  
-  #filter(!Total_Veg2 == 0)  #remove all rows where total_veg is equal to 0
-  
 ```
 
 #### Using Full_Join to combine main data sheet and metadata sheet ####
@@ -68,19 +69,12 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
 ```
 
 
-#GLMM attempt:
-
-#since the same transects are measured repeatedly, the transects are used as a random effect
+#Visual normality testing
 ```{r}
-hist(vegdatamerged$Total_Veg2)
+hist(vegdatamerged$Total_Veg2) #data is majorly zero-inflated and overdispersed at zero adn around 25
 #QQ-Plot:
 qqnorm(vegdatamerged$Total_Veg2, pch = 1, frame = FALSE)
 qqline(vegdatamerged$Total_Veg2, col = "steelblue", lwd = 2)
-
-#attempting to use mvabund to make a mean vs variance plot ##cant figure out how to work yet
-tikus <- data("tikus")
-vegdata_mvabund <- mvabund(vegdatamerged$Total_Veg2)
-meanvar.plot(vegdata_mvabund)
 ```
 
 

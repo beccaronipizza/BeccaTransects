@@ -1,0 +1,332 @@
+---
+title: "Veg_stats2"
+author: "Becca Morris"
+date: "2024-03-01"
+output: html_document
+---
+```{r}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(broom)
+library(AICcmodavg)
+library(glmmTMB)
+library(lme4)
+library(lubridate)
+library(ggpubr)
+library(moments) #for checking skewness
+library(AER) #for checking overdispersion with Poissond data
+library(MASS) #for runninga neg. bin. glm
+library(DHARMa)
+```
+
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdataLZ <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_LZ")
+```
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+# 1. creating the main data frame:   ***Going to eliminate low counted species and percentages TURNED OFF!!!
+
+#This DF includes all species:
+```{r}
+vegdata3 <- vegdataLZ %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp', 'AtPx', 'PoAr', 'AcMa', 'GrSt', 'MixedSeedlings','GrGR', 'Melilotus', 'MePo'), as.numeric) %>% 
+  mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  mutate(Melilotus = MePo + MeIn) %>%  #Combining into one genus
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>%
+  #select(-BoMa, -RaSa, -CaMa, -SaSo, -Lolium, -GrSt, -FrSa, -Fabiaceae, -Ranunculus, -Taraxacum, -Vicia, -MeIn, -MePo, -Xant, -PoAr, -DiGr, -AcMa, -DiSp, -Brassicaceae,            -Sonc, -MePo, -MeIn, -GrGR, -LeTr, -MixedSeedlings) %>% #removing low count species
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>%      #combine and distribute picklepup category amongst the two species
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(across(c('SaPa_new', 'SaDe_new'),(~replace_na(., 0)))) %>%   #where the calculations above = 0, R was turning them into NaN's
+  mutate(SaPa_new = if_else(SaPa_new > 25, 25, SaPa_new),
+         SaDe_new = if_else(SaDe_new > 25, 25, SaDe_new)) %>% 
+  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
+  mutate(Grass = ifelse(Grass > 25, 25, Grass)) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
+  #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
+  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe','SaSp')) %>% #removed SaSp column so it would not be counted as part of 'Total_Veg2' column in addition to the SaPa and SaDe columns
+  rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
+  mutate(across(c('SaPa', 'SaDe'), ~round(., 0))) %>% 
+  relocate(Log_Zone, .after = last_col()) %>%    #if you want to use log zone you need to upload the vegdata spreadsheet using the Data_2_LZ sheet.
+  mutate(Total_Veg2 = rowSums(across(SpFo:Grass))) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
+  mutate(Date = paste0(Year, "-", Month)) %>%
+  #mutate(Date = as.factor(Date)) %>% 
+  filter(is.na(Log_Zone))  #%>% #remove rows where the quad that lands on log and the one quad that lands above and below are marked as "R" for remove
+  #filter(!Total_Veg2 == 0)  #remove all rows where total_veg is equal to 0
+  
+```
+#Improved version of main DF:
+```{r}
+vegdata3 <- vegdataLZ %>% 
+  select(Month, Year, Transect_ID, Distance_meters, Quadrat, Zone, SpFo, SaPa, SaDe, SpMa, PicklePups, BaGr_1, BaGr_2, Log_Zone) %>% 
+  mutate(across(SpFo:BaGr_2, ~replace_na(.,0))) %>% 
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>%      #combine and distribute picklepup category amongst the two species
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(across(c('SaPa_new', 'SaDe_new'),(~replace_na(., 0)))) %>%   #where the calculations above = 0, R was turning them into NaN's
+  mutate(SaPa_new = ifelse(SaPa > 25, 25, SaPa_new)) %>%      #these lines tell it where these columns exceed 25 quad's, to just set them = to 25
+  mutate(SaDe_new = ifelse(SaDe_new > 25, 25, SaDe_new)) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  dplyr::select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
+  #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
+  #mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
+  dplyr::select(-c('PicklePups','SaPa','SaDe','SaSp')) %>% #removed SaSp column so it would not be counted as part of 'Total_Veg2' column in addition to the SaPa and SaDe columns
+  rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
+  mutate(across(c('SaPa', 'SaDe'), ~round(., 0))) %>% 
+  #mutate(across(SpFo:Grass, ~ .x*4)) %>% #makes everything into percentages
+  relocate(Log_Zone, .after = last_col()) %>%    #if you want to use log zone you need to upload the vegdata spreadsheet using the Data_2_LZ sheet
+  mutate(across(SpFo:Total_Veg, ~replace_na(.x,0))) %>% 
+  mutate(Total_Veg2 = (rowSums(across(SpFo:SaDe)))) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
+  mutate(Date = paste0(Year, "-", Month)) %>%
+  filter(is.na(Log_Zone))  %>% #remove rows where the quad that lands on log and the one quad that lands above and below are marked as "R" for remove
+  relocate(Total_Veg2, .after = Total_Veg) %>% 
+  mutate(across(SpFo:Total_Veg2, ~replace_na(.x,0)))
+```
+
+#### Using Full_Join to combine main data sheet and metadata sheet ####
+
+# 2. First I want to clean up the metadata sheet:
+```{r}
+vegmetadata %>% 
+  dplyr::select(Transect_ID, Shoreline_End, Log_Presence) 
+```
+
+# 3. Now to merge the two data frames together, combine pickleweed species into a single column, distirbute picklepups into SaPa and SaDe columns, combine grasses into one column, and remove the redunant columns:
+```{r}
+vegdatamerged <- full_join(vegdata3, vegmetadata, by = "Transect_ID") %>% 
+  dplyr::select(-c(...9:...12)) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")), #need to set these as factor to run a glmm
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) 
+```
+
+# 4. Visual normality testing of raw data:
+```{r}
+hist(vegdatamerged$Total_Veg2) #data is majorly zero-inflated and overdispersed at zero and around 25
+
+#QQ-Plot:
+qqnorm(vegdatamerged$Total_Veg2, pch = 1, frame = FALSE)
+qqline(vegdatamerged$Total_Veg2, col = "steelblue", lwd = 2)
+
+
+```
+
+
+#5. Since data looks very zero inflated and overdispersed at 25 (see histogram above), I will parse out the data into manageable chunks:
+
+# Count difference for ONE growing season:
+
+#Year 1:
+```{r}
+vegdata_YR1Diff <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-June" | Date == "2022-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) 
+
+#histogram:
+hist(vegdata_YR1Diff$count_difference) #VERY zero-inflated
+
+#QQ-Plot:
+qqnorm(vegdata_YR1Diff$count_difference, pch = 1, frame = FALSE)
+qqline(vegdata_YR1Diff$count_difference, col = "steelblue", lwd = 2)
+
+#!!! Everything below here for YR 1 was from when the first vegdata3 was run !!!!!!!
+#Rerun without the outliers:
+vegdata_YR1Diff <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-June" | Date == "2022-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>% 
+  filter(!(Transect_ID == "C3-L42" | Transect_ID == "C3-L44" |Transect_ID == "C2-L22" | Transect_ID == "C7-BW188"))
+
+
+#histogram:
+hist(vegdata_YR1Diff$count_difference)
+
+#QQ-Plot:
+qqnorm(vegdata_YR1Diff$count_difference, pch = 1, frame = FALSE)
+qqline(vegdata_YR1Diff$count_difference, col = "steelblue", lwd = 2)
+
+#Better, but negatively or left skewed and over dispersed in middle.
+```
+
+#Further testing:
+```{r}
+shapiro.test(vegdata_YR1Diff$count_difference)  #p-value = 2.259e-12 which means that the data is not normally distributed
+
+skewness(vegdata_YR1Diff$count_difference) # Skewness = -0.5291877  means it is moderately skewed
+#Symmetric: Values between -0.5 to 0.5. 
+#Moderated Skewed data: Values between -1 and -0.5 or between 0.5 and 1. 
+#Highly Skewed data: Values less than -1 or greater than 1. 
+```
+#Plot the density distribution of each variable and compare the observed distribution to what we would expect if it were perfectly normal (dashed red line):
+```{r}
+ggdensity(vegdata_YR1Diff, x = "count_difference", fill = "lightgray", title = "count_difference") +
+  scale_x_continuous(limits = c(-50, 30)) +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+```
+#Apply a transformation: https://www.datanovia.com/en/lessons/transform-data-to-normal-distribution-in-r/
+```{r}
+#Applying a sqrt transformation first for moderate/negative skewness. 
+#Nan's produced bc I have negative values. Need to add a fixed integer to the variable so the numbers are positive (variance/effect will remain the same as original data).
+vegdata_YR1Diff <- vegdata_YR1Diff %>% 
+  mutate(newcountdiff = count_difference + 37) %>% 
+  mutate(sqrtnewcountdiff = sqrt(max(newcountdiff+1) - newcountdiff)) %>% 
+  mutate(log10sqrtnewcountdiff = log10(max(newcountdiff+1) - newcountdiff))
+    
+skewness(vegdata_YR1Diff$sqrtnewcountdiff, na.rm = TRUE)  #skewness = -0.444 better!
+skewness(vegdata_YR1Diff$log10sqrtnewcountdiff, na.rm = TRUE) #skewness = -2.14 worse!
+```
+
+```{r}
+ggdensity(vegdata_YR1Diff, x = "sqrtnewcountdiff", fill = "lightgray", title = "sqrtnewcountdiff") +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+```
+
+#To find out if we have over dispersion or zero-inflation. Has to be run on the model, not on the response variable:
+```{r}
+#Poisson:
+#Can't run a poisson distribution with negative values so had to run +37 df from above
+glm_YR1_po <- glm(formula = newcountdiff ~ Shoreline_End*Zone*Log_Presence, data =vegdata_YR1Diff, family = poisson)
+summary(glm_YR1_po) #the residual deviance/degrees fo freedom should  = 1, or at least be really close. My over dispersion = 2.35
+dispersiontest(glm_YR1_po) #Can only run on Poisson glm's. Test says over dispersion = 2.046
+
+
+#Try again with a negative binomial family and same as above applies for the negative values:
+glm_YR1_nb <- glm.nb(formula = newcountdiff ~ Shoreline_End*Zone*Log_Presence, data =vegdata_YR1Diff)
+summary(glm_YR1_nb) #Dispersion parameter for neg. bin. is = 25.39 
+
+#Have to use DHARMa package to test neg. bin. over dispersion:
+sim_glm_YR1_nb <- simulateResiduals(glm_YR1_nb, refit=T, n=99)
+plot(sim_glm_YR1_nb)
+```
+
+
+
+
+
+#Year 2:
+```{r}
+vegdata_YR2Diff <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2023-June" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2023-August")) 
+
+#histogram:
+hist(vegdata_YR2Diff$count_difference) #Also crazy zero inflated!
+
+#QQ-Plot:
+qqnorm(vegdata_YR2Diff$count_difference, pch = 1, frame = FALSE)
+qqline(vegdata_YR2Diff$count_difference, col = "steelblue", lwd = 2)
+
+#Negatively or left skewed and over dispersed in middle.
+```
+
+
+
+#Count differences between TWO growing seasons:
+```{r}
+vegdata_2YRDiff <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-June" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2023-August")) 
+
+#histogram:
+hist(vegdata_2YRDiff$count_difference) 
+
+#QQ-Plot:
+qqnorm(vegdata_2YRDiff$count_difference, pch = 1, frame = FALSE)
+qqline(vegdata_2YRDiff$count_difference, col = "steelblue", lwd = 2)
+
+#RESULT: One really big outlier in the positive direction. Will remove below:
+vegdata_2YRDiff <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-June" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2023-August")) %>% 
+  filter(!(Transect_ID == "C3-BW47"))
+
+#histogram:
+hist(vegdata_2YRDiff$count_difference) #And also VERY zero-inflated
+
+#QQ-Plot:
+qqnorm(vegdata_2YRDiff$count_difference, pch = 1, frame = FALSE)
+qqline(vegdata_2YRDiff$count_difference, col = "steelblue", lwd = 2)
+
+```
+#Everything below pertains to the first vegdata3 DF (with more species included):
+#Further testing:
+```{r}
+shapiro.test(vegdata_2YRDiff$count_difference)  #p-value = 1.69 x e-05 which means that the data is not normally distributed
+
+skewness(vegdata_2YRDiff$count_difference, na.rm = TRUE) # Skewness = 0.24167 -- highly skewed!
+#Symmetric: Values between -0.5 to 0.5. 
+#Moderated Skewed data: Values between -1 and -0.5 or between 0.5 and 1. 
+#Highly Skewed data: Values less than -1 or greater than 1. 
+```
+
+#Plot the density distribution of each variable and compare the observed distribution to what we would expect if it were perfectly normal (dashed red line):
+```{r}
+ggdensity(vegdata_2YRDiff, x = "count_difference", fill = "lightgray", title = "count_difference") +
+  scale_x_continuous(limits = c(-50, 30)) +
+  stat_overlay_normal_density(color = "red", linetype = "dashed")
+```
+
+
+#What if this is split up by zone? #With so few species represented the zero-inflation just gets worse! 
+```{r}
+vegdata_U <- vegdatamerged[(vegdatamerged$Zone == "U" & vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>% 
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+
+#histogram:
+hist(vegdata_U$count_difference)
+
+#QQ-Plot:
+qqnorm(vegdata_U$count_difference, pch = 1, frame = FALSE)
+qqline(vegdata_U$count_difference, col = "steelblue", lwd = 2)
+```
+
+```
+

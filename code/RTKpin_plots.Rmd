@@ -36,7 +36,7 @@ RTKpins <- RTKpindata_norefs %>%
 RTKpinschangeEvW <- RTKpins %>%
   mutate(UpperDiff = ((last(upper) - first(upper))*-1)*30.48) %>%  # *30.48 converts NADV88 ft to cm
   mutate(MiddleDiff = ((last(middle) - first(middle))*-1)*30.48) %>% 
-  mutate(LowerDiff = ((last(lower) - first(lower))*-1)*30.48) %>% 
+  mutate(LowerDiff = ((last(lower) - first(lower))*-1)*30.48) %>%
   select(-c("Date", "Year", "Month", "upper", "middle", "lower")) %>% 
   distinct() %>%  #this removes repeated values for each month's calculation
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east"))) %>%
@@ -45,7 +45,8 @@ RTKpinschangeEvW <- RTKpins %>%
   summarize(mean_difference = mean(Sediment_Change, na.rm = TRUE),
             sd_difference = sd(Sediment_Change, na.rm = TRUE),
             n_difference = n()) %>% 
-  mutate(se_difference = sd_difference/sqrt(n_difference))
+  mutate(se_difference = sd_difference/sqrt(n_difference)) %>% 
+  mutate(across(where(is.numeric), ~round(., 1)))
 ```
 
 
@@ -106,7 +107,7 @@ RTKpinschangeLvNL <- RTKpins %>%
             sd_difference = sd(Sediment_Change, na.rm = TRUE),
             n_difference = n()) %>% 
   mutate(se_difference = sd_difference/sqrt(n_difference)) %>% 
-  mutate(across(where(is.numeric), ~round(., 2)))
+  mutate(across(where(is.numeric), ~round(., 1)))
   
 
 
@@ -152,7 +153,7 @@ RTKpinLvNLplot <- ggplot(RTKpinschangeLvNL,
   geom_text(aes(label = mean_difference), #geom text is for the labels over the bars
                 vjust = -2,  #higher values shift text down
                 hjust = 0.5, #higher values shift text horizontally left
-                position = position_stack(),,
+                position = position_stack(),
                 color = "black",
             size = 3.25)   
 

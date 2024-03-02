@@ -64,9 +64,6 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
 ```
 
 
-
-
-
 # #################################################################################################################################### #
 #Creating a df just for SpFo for BARPLOT:
 ```{r}
@@ -396,7 +393,7 @@ TotalVeg_change_barplot <- ggplot(TotalVeg_change,
   scale_fill_manual(values = cbp) +
   facet_grid(Log_Presence ~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(-10, 50)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(-10, 55)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Mean % Change in Total Vegetation Cover",
     subtitle = "August 2022 to August 2023",
