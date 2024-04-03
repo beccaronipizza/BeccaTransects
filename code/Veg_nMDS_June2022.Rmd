@@ -84,7 +84,9 @@ VegDataSpecies_U <- VegDataMerged[(VegDataMerged$Date == "2022-June" & VegDataMe
 
 
 
-#Transform the veg communities using the hellinger transformation.This transformation is useful for abundance data when you may have a few really abundant species and many rare species.It transforms the abundances of the really abundant and few rare species don't have less of an influence on the ordination. hellinger: square root of method = "total" (Legendre & Gallagher 2001).
+#Transform the veg communities using the hellinger transformation.This transformation is useful for abundance data when you may have a few really abundant species and many rare species.It transforms the abundances of the really abundant and few rare species don't have less of an influence on the ordination. hellinger: square root of method = "total" (Legendre & Gallagher 2001). 
+
+#More on this: many zeros can lead to a double zero problem, where common absences artificially increase the similarity between sites, in terms of their community composition. In other words, two sites might appear more similar just because they are both missing some species, even though common absences do not make them ecologically similar. Instead, we want common presences to determine site similarity (https://r.qcbs.ca/workshop10/book-en/exploration.html#exploring-the-fish-community-dataset).
 
 VegDataSpecies.hel_U <- decostand(VegDataSpecies_U, method = "hellinger")
 

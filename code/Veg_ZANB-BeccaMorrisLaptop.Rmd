@@ -1,0 +1,140 @@
+---
+title: "Veg_stats_ZANB"
+author: "Becca Morris"
+date: "2024-02-27"
+output: html_document
+---
+```{r setup, include=FALSE}
+library(readxl)
+library(tidyverse)
+library(ggplot2)
+library(broom)
+library(AICcmodavg)
+library(glmmTMB)
+library(lme4)
+library(bbmle)
+library(pscl)
+library(lmtest) #runs a likelyhood ratio test
+
+
+setwd("~/GitHub/BeccaTransects/data")
+
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_LZ")
+```
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!#
+# 1. creating the main data frame:
+```{r}
+vegdata4 <- vegdata %>% 
+  dplyr::select(Month, Year, Transect_ID, Distance_meters, Quadrat, Zone, SpFo, SaPa, SaDe, SpMa, PicklePups, BaGr_1, BaGr_2, Log_Zone) %>% 
+  mutate(across(SpFo:BaGr_2, ~replace_na(.,0))) %>% 
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>%      #combine and distribute picklepup category amongst the two species
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(across(c('SaPa_new', 'SaDe_new'),(~replace_na(., 0)))) %>%   #where the calculations above = 0, R was turning them into NaN's
+  mutate(SaPa_new = ifelse(SaPa > 25, 25, SaPa_new)) %>%      #these lines tell it where these columns exceed 25 quad's, to just set them = to 25
+  mutate(SaDe_new = ifelse(SaDe_new > 25, 25, SaDe_new)) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  dplyr::select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
+  #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
+  #mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
+  dplyr::select(-c('PicklePups','SaPa','SaDe','SaSp')) %>% #removed SaSp column so it would not be counted as part of 'Total_Veg2' column in addition to the SaPa and SaDe columns
+  rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
+  mutate(across(c('SaPa', 'SaDe'), ~round(., 0))) %>% 
+  #mutate(across(SpFo:Grass, ~ .x*4)) %>% #makes everything into percentages
+  relocate(Log_Zone, .after = last_col()) %>%    #if you want to use log zone you need to upload the vegdata spreadsheet using the Data_2_LZ sheet
+  mutate(across(SpFo:Total_Veg, ~replace_na(.x,0))) %>% 
+  mutate(Total_Veg2 = (rowSums(across(SpFo:SaDe)))) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
+  mutate(Date = paste0(Year, "-", Month)) %>%
+  filter(is.na(Log_Zone))  %>% #remove rows where the quad that lands on log and the one quad that lands above and below are marked as "R" for remove
+  relocate(Total_Veg2, .after = Total_Veg) %>% 
+  mutate(across(SpFo:Total_Veg2, ~replace_na(.x,0)))
+  
+```
+
+#### Using Full_Join to combine main data sheet and metadata sheet ####
+
+# 2. First I want to clean up the metadata sheet:
+```{r}
+vegmetadata %>% 
+  dplyr::select(Transect_ID, Shoreline_End, Log_Presence)
+```
+
+# 3. Now to merge the two data frames together, combine pickleweed species into a single column, distirbute picklepups into SaPa and SaDe columns, combine grasses into one column, and remove the redunant columns:
+```{r}
+vegdatamerged <- full_join(vegdata3, vegmetadata, by = "Transect_ID") %>% 
+  dplyr::select(-c(...9:...12)) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")), #need to set these as factor to run a glmm
+        Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) 
+```
+
+
+#GLMM attempt:
+
+#since the same transects are measured repeatedly, the transects are used as a random effect
+```{r}
+hist(vegdatamerged$Total_Veg2) #data is majorly zero-inflated and overdispersed at zero adn around 25
+#QQ-Plot:
+qqnorm(vegdatamerged$Total_Veg2, pch = 1, frame = FALSE)
+qqline(vegdatamerged$Total_Veg2, col = "steelblue", lwd = 2)
+```
+
+
+#ZANB:
+
+#set up a df for this:
+
+#all of this is found starting on pg. 278 in the Mixed Effect model book
+
+# If your explanatory variables aren't already, set them as factors. *Already done by code up above.
+#Set 0's to NA if nto already done. *Already done by code up above
+```{r}
+I1 <- is.na(vegdatamerged$Total_Veg2) |
+  is.na(vegdatamerged$Shoreline_End) |
+  is.na(vegdatamerged$Zone) |
+  is.na(vegdatamerged$Log_Presence)
+
+vegdatamerged2 <- vegdatamerged[!I1,]
+```
+
+```{r}
+plot(table(vegdatamerged2$Total_Veg2),
+     xlab = "Observed Total Veg Count Values",
+     ylab = "Frequencies")
+
+
+#After plotting, there is a big outlier: April 2023 C7-L190.  Lets remove:
+
+vegdatamerged2 %>% filter(!(Transect_ID == "C7-L190" & Distance_meters == "4" & Month == "April" & Year == "2023"))
+```
+
+
+#Compare the ZAP and ZANB model to detrmine which one is a better:
+```{r}
+#Applies a zero-inflated model
+f1 <- formula(Total_Veg2 ~ Shoreline_End*Zone*Log_Presence | Shoreline_End*Zone*Log_Presence) ###### IS this the correct formula?!?!
+
+#Determine which model you need:   *we are testing whether the variance structure of the Poisson is the same as the var structure of the Nb model
+Nb1 <- zeroinfl(f1,dist = "negbin", link = "logit",  #ZANB
+                data = vegdatamerged2)
+Zap1 <- zeroinfl(f1,dist = "poisson", link = "logit",  #ZAP
+                data = vegdatamerged2)
+
+lrtest(Nb1, Zap1) #Chi^2 = 2.2 x e-16 *** so use the ZANB model?
+summary(Nb1)
+```
+
+```{r}
+#Another way to determine if you need a ZAP or ZANB model:
+H1A <- hurdle(f1, dist = "poisson", link = "logit",  #ZAP
+              data = vegdatamerged2)
+H1B <- hurdle(f1, dist = "negbin", link = "logit",  #ZANB
+              data = vegdatamerged2)
+
+lrtest(H1A, H1B)   #Ho: use the Zap model. Hi: Use the ZANB model 
+AIC(H1A, H1B)     #AIC H1A = 46239.59	 and H1B = 36446.53    *Choose model with the lower AIC value
+```
+

@@ -164,7 +164,7 @@ vegdata_L <- vegdatamerged[(vegdatamerged$Zone == "L" & vegdatamerged$Log_Presen
 
 # Upper Zone Normality using the Total_Veg2 column created in step 1:
 ```{r}
-#change variable based on which dataset youare using!!
+#change variable based on which dataset you are using!!
 
 #QQ-Plot:
 qqnorm(vegdata_U$count_difference, pch = 1, frame = FALSE)

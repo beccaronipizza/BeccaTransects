@@ -1,0 +1,178 @@
+---
+title: "Veg_stats_forMEANS"
+author: "Becca Morris"
+date: "2024-04-01"
+output: html_document
+---
+
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2")
+```
+
+#Total Veg CHANGE:
+```{r}
+##
+#calculating change in cover for total veg (where total can exceed 25) and then the mean change for each zone, shoreline end, and log presence:
+
+vegdata2 <- vegdata %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp', 'AtPx', 'PoAr', 'AcMa', 'GrSt', 'MixedSeedlings','GrGR', 'Melilotus', 'MePo'), as.numeric) %>% 
+  mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>%      #combine and distribute picklepup category amongst the two species
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(across(c('SaPa_new', 'SaDe_new'),(~replace_na(., 0)))) %>%   #where the calculations above = 0, R was turning them into NaN's
+  mutate(SaPa_new = ifelse(SaPa > 25, 25, SaPa_new)) %>%      #these lines tell it where these columns exceed 25 quad's, to just set them = to 25
+  mutate(SaDe_new = ifelse(SaDe_new > 25, 25, SaDe_new)) %>% 
+  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
+  mutate(Grass = ifelse(Grass > 25, 25, Grass)) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
+  #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
+  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe','SaSp')) %>% #removed SaSp column so it would not be counted as part of 'Total_Veg2' column in addition to the SaPa and SaDe columns
+  rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
+  mutate(across(c('SaPa', 'SaDe'), ~round(., 0))) %>% 
+  #relocate(Log_Zone, .after = last_col()) %>%    #if you want to use log zone you need to upload the vegdata spreadsheet using the Data_2_LZ sheet.
+  mutate(across(SpFo:Grass, ~ .x*4)) %>% #makes everything into percentages
+  mutate(Total_Veg2 = rowSums(across(SpFo:Grass))) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
+  mutate(Date = paste0(Year, "-", Month)) #%>% 
+#filter(is.na(Log_Zone))  #remove rows where the quad that lands on log and the one quad that lands above and below are marked as "R" for remove
+#filter(!Total_Veg2 == 0)  #remove all rows where total_veg is equal to 0
+
+vegmetadata %>% 
+  select(Transect_ID, Shoreline_End, Log_Presence)
+
+vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>% 
+  select(-c(...9:...12)) 
+```
+
+
+# TOTAL VEG CHANGE:
+```{r}
+TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #remove reference logs from calculation
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+```{r}
+hist(TotalVeg_change$mean_cover)
+shapiro.test(TotalVeg_change$mean_cover) #p-value > 0.05 (0.6545) suggesting a normal distribution. p > 0.05, accept null that samples come from a normal distribution.
+
+
+#ANOVA with interactive effects:
+Interactive <- lm(mean_cover ~ Shoreline_End*Log_Presence*Zone,
+            data = TotalVeg_change)
+
+summary(Interactive)
+plot(Interactive)
+
+
+#ANOVA with additive effects:
+Additive <- lm(mean_cover ~ Log_Presence+Shoreline_End+Zone,
+            data = TotalVeg_change)
+
+summary(Additive)
+plot(Additive)
+
+
+
+
+#Find the best fit model:
+model.set <- list(Interactive, Additive)
+model.names <- c("Interactive", "Additive")
+
+aictab(model.set, modnames = model.names) #the model with the lowest AIC value is the best fit for the data
+#RESULTS: The two way model has the lowest AIC value and carries 95% of the AIC weight, which means it explains 95% of the total variation in the dependent variable that can be explained by both models.
+
+
+#Check for homoscedasticity:
+plot(TwoWay) #Some outliers having an influence?
+
+
+#Kruskal-Wallis test: ???
+kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
+            data = TotalVeg_change)
+```
+
+
+# Total SpFo Change:
+```{r}
+TotalSpFo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #remove reference logs from calculation
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SpFo),
+         final_count = last(SpFo),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+```{r}
+hist(TotalSpFo_change$mean_cover)
+shapiro.test(TotalSpFo_change$mean_cover) #p-value <0.05 (0.01204) suggesting a non-normal distribution. p > 0.05, accept null that samples come from a normal distribution.
+
+
+#ANOVA with interactive effects:
+Interactive <- lm(mean_cover ~ Shoreline_End*Log_Presence*Zone,
+            data = TotalSpFo_change)
+
+summary(Interactive)
+plot(Interactive)
+
+
+#ANOVA with additive effects:
+Additive <- lm(mean_cover ~ Log_Presence+Shoreline_End+Zone,
+            data = TotalSpFo_change)
+
+summary(Additive)
+plot(Additive)
+
+
+
+
+#Find the best fit model:
+model.set <- list(Interactive, Additive)
+model.names <- c("Interactive", "Additive")
+
+aictab(model.set, modnames = model.names) #the model with the lowest AIC value is the best fit for the data
+#RESULTS: The two way model has the lowest AIC value and carries 95% of the AIC weight, which means it explains 95% of the total variation in the dependent variable that can be explained by both models.
+
+
+#Check for homoscedasticity:
+plot(TwoWay) #Some outliers having an influence?
+
+
+#Kruskal-Wallis test: ???
+kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
+            data = TotalVeg_change)
+```
+

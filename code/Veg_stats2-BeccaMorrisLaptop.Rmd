@@ -18,6 +18,8 @@ library(moments) #for checking skewness
 library(AER) #for checking overdispersion with Poissond data
 library(MASS) #for runninga neg. bin. glm
 library(DHARMa)
+library(pscl)
+library(lmtest)
 ```
 
 ```{r}
@@ -185,7 +187,7 @@ ggdensity(vegdata_YR1Diff, x = "count_difference", fill = "lightgray", title = "
 #Applying a sqrt transformation first for moderate/negative skewness. 
 #Nan's produced bc I have negative values. Need to add a fixed integer to the variable so the numbers are positive (variance/effect will remain the same as original data).
 vegdata_YR1Diff <- vegdata_YR1Diff %>% 
-  mutate(newcountdiff = count_difference + 37) %>% 
+  mutate(newcountdiff = count_difference + 36) %>% 
   #mutate(sqrtnewcountdiff = sqrt(max(newcountdiff+1) - newcountdiff)) %>% 
   #mutate(log10sqrtnewcountdiff = log10(max(newcountdiff+1) - newcountdiff))
     
@@ -199,15 +201,15 @@ M1 <- glm(newcountdiff ~ Shoreline_End*Log_Presence*Zone,
 
 summary(M1)
 
-## Check for over/underdispersion in the model
+## Check for over/underdispersion in the model. Should be close to 1. (-0.5-0.5 = o, > 0.5 = over dispersed, < 0.5= underdispersed)
 E2 <- resid(M1, type = "pearson")
 N  <- nrow(vegdata_YR1Diff)
 p  <- length(coef(M1))   
-sum(E2^2) / (N - p)
+sum(E2^2) / (N - p)         #1.8
 
 
-
-M2 <- glm.nb(newcountdiff ~ Shoreline_End*Log_Presence,
+# Negative Binomial GLM
+M2 <- glm.nb(newcountdiff ~ Shoreline_End*Log_Presence*Zone,
              data = vegdata_YR1Diff)
 
 summary(M2)
@@ -216,7 +218,34 @@ summary(M2)
 E2 <- resid(M2, type = "pearson")
 N  <- nrow(vegdata_YR1Diff)
 p  <- length(coef(M2)) + 1  # '+1' is for variance parameter in NB
+sum(E2^2) / (N - p)     #0.95
+
+
+
+#Zip GLM
+M3 <- zeroinfl(newcountdiff ~ Shoreline_End*Log_Presence*Zone |  ## Predictor for the Poisson process
+               Shoreline_End*Log_Presence*Zone, ## Predictor for the Bernoulli process;
+               dist = 'poisson',
+               data = vegdata_YR1Diff)
+
+summary(M3)
+
+# Dispersion statistic
+E2 <- resid(M3, type = "pearson")
+N  <- nrow(vegdata_YR1Diff)
+p  <- length(coef(M3))  
 sum(E2^2) / (N - p)
+
+
+
+
+#ZINB GLM
+M4 <- zeroinfl(newcountdiff ~ Shoreline_End*Log_Presence | 
+               Shoreline_End*Log_Presence,
+               dist = 'negbin',
+               data = vegdata_YR1Diff)                       ### !!! Getting an error!!!!
+
+summary(M4)
 ```
 
 ```{r}
