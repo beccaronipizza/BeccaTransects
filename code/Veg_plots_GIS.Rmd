@@ -38,7 +38,7 @@ cbp <- c("#F0E442", "#CC79A7", "#0072B2","#D55E00", "#009E73", "#56B4E9","#E69F0
 GISveg_byshoreline <- GISvegdata %>% 
   mutate(Date = paste0(Year, "-", Month)) %>% 
   select(-Shapefile, -Month, -Year) %>% 
-  filter(Zone == "All" & Shoreline_end != "Both") %>% 
+  filter(Zone == "All" & Shoreline_end != "both") %>% 
   group_by(Shoreline_end)
   
 ```
@@ -86,7 +86,8 @@ GISvegplot
 GISveg_byZ <- GISvegdata %>% 
   mutate(Date = paste0(Year, "-", Month)) %>% 
   select(-Shapefile, -Month, -Year) %>% 
-  filter(Zone != "All" & Shoreline_end == "Both") %>%
+  filter(Zone != "All" & Shoreline_end == "both") %>%
+  mutate(Zone = factor(Zone, levels = c("Upper", "Middle", "Lower"))) %>% #make it so that they get plotted int he correct order
   group_by(Zone)
   
 ```
@@ -101,8 +102,6 @@ GISvegplot_byZ <- ggplot(GISveg_byZ,
                                    shape =  Zone)) +
   geom_point(size = 3, position = position_dodge(0.2)) +
   geom_line(linewidth = 0.8, position = position_dodge(0.2)) +
-  guides(color = guide_legend(title = "Marsh Zone")) +
-  scale_fill_manual(values = cbp) +
   labs( 
     title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery (Hectares)",
     subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
@@ -157,9 +156,6 @@ GISvegplot_byZandS <- ggplot(GISveg_byZandS,
                                    fill = Zone)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
-  #guides(color = guide_legend(title = "Marsh Zone")) +
-  #geom_line() +
-  scale_fill_manual(values = cbp) +
   facet_grid(Shoreline_end ~ Year) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
   coord_cartesian(ylim = c(0, 0.9)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
@@ -173,6 +169,10 @@ GISvegplot_byZandS <- ggplot(GISveg_byZandS,
     #caption = "*Error bars reflect standard error",
     fill = "Shoreline End",
     tag = "Veg_plots_GIS.Rmd-GISvegplot_byZandS") +
+  scale_color_manual(
+    name = "Marsh Zone",
+    values = c("#D55E00","#009E73", "#0072B2"),
+    labels = c("Upper", "Middle", "Lower")) +
   theme_bw(base_size = 10) +
   guides(fill = FALSE) + #turns off legend for fill
   theme(axis.title = element_text(face = "bold", size=12),
