@@ -43,11 +43,11 @@ GISveg_byshoreline <- GISvegdata %>%
   
 ```
 
-#For Hectares:
+#Sq meters:
 ```{r}
 GISvegplot <- ggplot(GISveg_byshoreline, 
                      mapping = aes(x = Date,
-                                   y = Hectares,
+                                   y = Sq_meters,
                                    group = Shoreline_end,
                                    color = Shoreline_end)) +
   geom_point(size = 3) +
@@ -55,10 +55,10 @@ GISvegplot <- ggplot(GISveg_byshoreline,
   geom_line() +
   scale_fill_manual(values = cbp) +
   labs( 
-    title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery (Hectares)",
+    title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery",
     subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
     x = "Date of Survey",
-    y ="Hectares",
+    y ="Square Meters",
     #caption = "*Error bars reflect standard error",
     fill = "Shoreline End") +
   theme_bw(base_size = 10) +
@@ -92,11 +92,11 @@ GISveg_byZ <- GISvegdata %>%
   
 ```
 
-#For Hectares:
+#Sq meters:
 ```{r}
 GISvegplot_byZ <- ggplot(GISveg_byZ, 
                      mapping = aes(x = Date,
-                                   y = Hectares,
+                                   y = Sq_meters,
                                    group = Zone,
                                    color = Zone,
                                    shape =  Zone)) +
@@ -107,10 +107,10 @@ GISvegplot_byZ <- ggplot(GISveg_byZ,
     values = c("#D55E00","#009E73", "#0072B2"),
     labels = c("Upper", "Middle", "Lower")) +
   labs( 
-    title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery (Hectares)",
+    title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery",
     subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
     x = "Date of Survey",
-    y ="Hectares",
+    y ="Square Meters",
     tag = "Veg_plots_GIS.Rmd-GISvegplot_byZ") +
     #caption = "*Error bars reflect standard error",
   theme_bw(base_size = 10) +
@@ -151,7 +151,7 @@ GISveg_byZandS <- GISvegdata %>%
 ```{r}
 GISvegplot_byZandS <- ggplot(GISveg_byZandS, 
                      mapping = aes(x = Zone,
-                                   y = Hectares,
+                                   y = Sq_meters,
                                    color = Zone,
                                    fill = Zone)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
@@ -159,14 +159,14 @@ GISvegplot_byZandS <- ggplot(GISveg_byZandS,
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   facet_grid(Shoreline_end ~ Year) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(0, 0.9)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(0, 9000)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
-    title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery (Hectares)",
+    title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery",
     subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
     caption = "*This plot depicts vegetation solely within Becca Morris's Thesis Project Extent 
     and does not encompass the entire Sears Point Adaptive Management Project Restoration",
     x = "Marsh Zone",
-    y ="Hectares",
+    y ="Square Meters",
     #caption = "*Error bars reflect standard error",
     fill = "Shoreline End",
     tag = "Veg_plots_GIS.Rmd-GISvegplot_byZandS") +
@@ -183,7 +183,7 @@ GISvegplot_byZandS <- ggplot(GISveg_byZandS,
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_text(aes(label = Hectares), #geom text is for the labels over the bars
+  geom_text(aes(label = Sq_meters), #geom text is for the labels over the bars
                 vjust = -0.8,  #higher values shift text down
                 hjust = 0.5, #higher values shift text horizontally left
                 position = position_stack(),
@@ -195,3 +195,362 @@ GISvegplot_byZandS
 ```
 
 
+
+
+
+#Same thing as above but only for SpFo:
+```{r}
+GISvegplot_SpFO <- ggplot(GISveg_byZandS, 
+                     mapping = aes(x = Zone,
+                                   y = Spartina_SM,
+                                   color = Zone,
+                                   fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  scale_fill_manual(values = cbp) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  facet_grid(Shoreline_end ~ Year) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 6000)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = expression(paste(bold("Sears Point  " *italic("Spartina foliosa")* "  Cover Change Over 3 Years via GIS & Aerial Imagery"))),
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    caption = "*This plot depicts vegetation solely within Becca Morris's Thesis Project Extent 
+    and does not encompass the entire Sears Point Adaptive Management Project Restoration",
+    x = "Marsh Zone",
+    y ="Square Meters",
+    #caption = "*Error bars reflect standard error",
+    fill = "Shoreline End",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_SpFO") +
+  theme_bw(base_size = 10) +
+  guides(fill = FALSE) + #turns off legend for fill
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=12),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = Spartina_SM), #geom text is for the labels over the bars
+                vjust = -0.8,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+                size = 3.25)
+  
+GISvegplot_SpFO
+```
+
+
+
+
+
+#Same thing as above but for SpFo % Cover:
+```{r}
+GISvegplot_SpFO_perc <- ggplot(GISveg_byZandS, 
+                     mapping = aes(x = Zone,
+                                   y = Spartina_PercCov,
+                                   color = Zone,
+                                   fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  scale_fill_manual(values = cbp) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  facet_grid(Shoreline_end ~ Year) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 75)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = expression(paste(bold("Sears Point " *italic("Spartina foliosa")* " Percent Cover Change Over 3 Years via GIS & Aerial Imagery"))),
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    caption = "*This plot depicts vegetation solely within Becca Morris's Thesis Project Extent 
+    and does not encompass the entire Sears Point Adaptive Management Project Restoration",
+    x = "Marsh Zone",
+    y ="Vegetation Cover (%)",
+    #caption = "*Error bars reflect standard error",
+    fill = "Shoreline End",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_SpFO_perc") +
+  theme_bw(base_size = 10) +
+  guides(fill = FALSE) + #turns off legend for fill
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=12),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = paste0(round(Spartina_PercCov), "%")), #geom text is for the labels over the bars
+                vjust = -0.8,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+                size = 3.25)
+  
+GISvegplot_SpFO_perc
+```
+
+
+
+
+#Same thing as above but only for SaPa:
+```{r}
+GISvegplot_Pickle <- ggplot(GISveg_byZandS, 
+                     mapping = aes(x = Zone,
+                                   y = Pickleweed_SM,
+                                   color = Zone,
+                                   fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  scale_fill_manual(values = cbp) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  facet_grid(Shoreline_end ~ Year) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 3100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = expression(paste(bold("Sears Point Pickleweed Zone Cover Change Over 3 Years via GIS & Aerial Imagery"))),
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    caption = "*This plot depicts vegetation solely within Becca Morris's Thesis Project Extent 
+    and does not encompass the entire Sears Point Adaptive Management Project Restoration",
+    x = "Marsh Zone",
+    y ="Square Meters",
+    #caption = "*Error bars reflect standard error",
+    fill = "Shoreline End",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_Pickle") +
+  theme_bw(base_size = 10) +
+  guides(fill = FALSE) + #turns off legend for fill
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=12),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = Pickleweed_SM), #geom text is for the labels over the bars
+                vjust = -0.8,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+                size = 3.25)
+  
+GISvegplot_Pickle
+```
+
+
+
+#Same thing as above but for SaPa % Cover:
+```{r}
+GISvegplot_Pickle_perc <- ggplot(GISveg_byZandS, 
+                     mapping = aes(x = Zone,
+                                   y = Pickleweed_PercCov,
+                                   color = Zone,
+                                   fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  scale_fill_manual(values = cbp) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  facet_grid(Shoreline_end ~ Year) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 120)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = expression(paste(bold("Sears Point Pickleweed Zone Percent Cover Change Over 3 Years via GIS & Aerial Imagery"))),
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    caption = "*This plot depicts vegetation solely within Becca Morris's Thesis Project Extent 
+    and does not encompass the entire Sears Point Adaptive Management Project Restoration",
+    x = "Marsh Zone",
+    y ="Vegetation Cover (%)",
+    #caption = "*Error bars reflect standard error",
+    fill = "Shoreline End",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_Pickle_perc") +
+  theme_bw(base_size = 10) +
+  guides(fill = FALSE) + #turns off legend for fill
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=12),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = paste0(round(Pickleweed_PercCov), "%")), #geom text is for the labels over the bars
+                vjust = -0.8,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+                size = 3.25)
+  
+GISvegplot_Pickle_perc
+```
+
+
+
+#Same thing as above but only for Mixed Veg:
+```{r}
+GISvegplot_Mixed <- ggplot(GISveg_byZandS, 
+                     mapping = aes(x = Zone,
+                                   y = MixedVeg_SM,
+                                   color = Zone,
+                                   fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  scale_fill_manual(values = cbp) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  facet_grid(Shoreline_end ~ Year) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 3100)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = expression(paste(bold("Sears Point Transition Zone Cover Change Over 3 Years via GIS & Aerial Imagery"))),
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    caption = "*This plot depicts vegetation solely within Becca Morris's Thesis Project Extent 
+    and does not encompass the entire Sears Point Adaptive Management Project Restoration",
+    x = "Marsh Zone",
+    y ="Square Meters",
+    #caption = "*Error bars reflect standard error",
+    fill = "Shoreline End",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_Mixed") +
+  theme_bw(base_size = 10) +
+  guides(fill = FALSE) + #turns off legend for fill
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=12),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = MixedVeg_SM), #geom text is for the labels over the bars
+                vjust = -0.8,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+                size = 3.25)
+  
+GISvegplot_Mixed
+```
+
+
+
+#Same thing as above but for Mixed Veg % Cover:
+```{r}
+GISvegplot_Mixed_perc <- ggplot(GISveg_byZandS, 
+                     mapping = aes(x = Zone,
+                                   y = MixedVeg_PercCov,
+                                   color = Zone,
+                                   fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  scale_fill_manual(values = cbp) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  facet_grid(Shoreline_end ~ Year) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 120)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = expression(paste(bold("Sears Point Pickleweed Zone Percent Cover Change Over 3 Years via GIS & Aerial Imagery"))),
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    caption = "*This plot depicts vegetation solely within Becca Morris's Thesis Project Extent 
+    and does not encompass the entire Sears Point Adaptive Management Project Restoration",
+    x = "Marsh Zone",
+    y ="Vegetation Cover (%)",
+    #caption = "*Error bars reflect standard error",
+    fill = "Shoreline End",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_Mixed_perc") +
+  theme_bw(base_size = 10) +
+  guides(fill = FALSE) + #turns off legend for fill
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=12),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = paste0(round(MixedVeg_PercCov), "%")), #geom text is for the labels over the bars
+                vjust = -0.8,  #higher values shift text down
+                hjust = 0.5, #higher values shift text horizontally left
+                position = position_stack(),
+                color = "black",
+                size = 3.25)
+  
+GISvegplot_Mixed_perc
+```
+
+
+
+
+
+#Now to place all three veg communites on top of each other in one bar chart:
+```{r}
+GISveg_Combined <- GISvegdata %>% 
+  mutate(Date = paste0(Year, "-", Month)) %>% 
+  select(-Shapefile, -Month) %>% 
+  filter(Zone != "All", Shoreline_end != "both") %>% 
+  #pivot_longer(cols = c(MixedVeg_SM, Pickleweed_SM, Spartina_SM),
+  #             names_to = "VegComm_SM",
+  #             values_to = "square_meters") %>%
+  pivot_longer(cols = c(MixedVeg_PercCov, Pickleweed_PercCov, Spartina_PercCov),
+               names_to = "PercentCover",
+               values_to = "Percent") %>% 
+  mutate(Shoreline_end = factor(Shoreline_end, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("Upper", "Middle", "Lower"))) %>% #make it sot hat facet grid orders shoreline end from west to east
+  group_by(Date, Zone, Shoreline_end) 
+```
+
+```{r}
+GISvegplot_Combined <- ggplot(GISveg_Combined, 
+                     mapping = aes(x = Zone,
+                                   y = Percent,
+                                   color = PercentCover,
+                                   fill = PercentCover)) +
+  geom_col(position = "stack") +
+  scale_fill_manual(values = cbp,
+                    name="Vegetation\nCommunity",
+                    labels=c("Mixed Transitional", "Pickleweed", "Spartina")) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  facet_grid(Shoreline_end ~ Year) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 120)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = expression(paste(bold("Sears Point Veg Community Cover Change Over 3 Years via GIS & Aerial Imagery (%)"))),
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    caption = "*This plot depicts vegetation solely within Becca Morris's Thesis Project Extent 
+    and does not encompass the entire Sears Point Adaptive Management Project Restoration",
+    x = "Marsh Zone",
+    y ="Percent Cover (%)",
+    #caption = "*Error bars reflect standard error",
+    fill = "Veg Community",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_Combined") +
+  theme_bw(base_size = 10) +
+  guides(color = FALSE) + #turns off legend for fill
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=12),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) # +
+  #geom_text(aes(label = Percent), #geom text is for the labels over the bars
+  #              vjust = -0.8,  #higher values shift text down
+  #              hjust = 0.5, #higher values shift text horizontally left
+  #              position = position_stack(),
+  #              color = "black",
+  #              size = 3.25)
+  
+GISvegplot_Combined
+```

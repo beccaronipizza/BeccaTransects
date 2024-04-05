@@ -4,6 +4,14 @@ author: "Becca Morris"
 date: "2024-04-01"
 output: html_document
 ---
+```{r}
+library(readxl)
+library(ggplot2)
+library(ggpubr)
+library(tidyverse)
+library(broom)
+library(AICcmodavg)
+```
 
 ```{r}
 setwd("~/GitHub/BeccaTransects/data")
@@ -64,34 +72,40 @@ TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %
   ungroup() %>% 
   filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
   group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
-  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
-            sd_cover = sd(count_difference, na.rm = TRUE),
-            n_cover = n()) %>% 
-  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+   #         sd_cover = sd(count_difference, na.rm = TRUE),
+    #        n_cover = n()) %>% 
+  #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
   mutate(across(where(is.numeric), ~round(., 0))) %>% 
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
          Zone = factor(Zone, levels = c("U", "M", "L")),
          Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
 
+#ANOVA
 ```{r}
-hist(TotalVeg_change$mean_cover)
-shapiro.test(TotalVeg_change$mean_cover) #p-value > 0.05 (0.6545) suggesting a normal distribution. p > 0.05, accept null that samples come from a normal distribution.
+hist(TotalVeg_change$count_difference) #use count_difference or Total_veg2?
+shapiro.test(TotalVeg_change$count_difference) #p > 0.05, accept null that samples come from a normal distribution. Normal when using count_difference but not if you use Total_Veg2.
 
 
 #ANOVA with interactive effects:
-Interactive <- lm(mean_cover ~ Shoreline_End*Log_Presence*Zone,
+Interactive <- aov(count_difference ~ Shoreline_End*Log_Presence*Zone,
             data = TotalVeg_change)
 
 summary(Interactive)
+
+#Check for Homoscedacity:
 plot(Interactive)
 
 
+
 #ANOVA with additive effects:
-Additive <- lm(mean_cover ~ Log_Presence+Shoreline_End+Zone,
+Additive <- aov(count_difference ~ Log_Presence+Shoreline_End+Zone,
             data = TotalVeg_change)
 
 summary(Additive)
+
+#Check for Homoscedacity:
 plot(Additive)
 
 
@@ -102,16 +116,21 @@ model.set <- list(Interactive, Additive)
 model.names <- c("Interactive", "Additive")
 
 aictab(model.set, modnames = model.names) #the model with the lowest AIC value is the best fit for the data
-#RESULTS: The two way model has the lowest AIC value and carries 95% of the AIC weight, which means it explains 95% of the total variation in the dependent variable that can be explained by both models.
+#RESULTS: The interactive model has a lower AIC value.
 
 
-#Check for homoscedasticity:
-plot(TwoWay) #Some outliers having an influence?
+#Find out which groups are statistically different from each other:
+tukey.Interactive <- TukeyHSD(Additive)
+tukey.Interactive
+
 
 
 #Kruskal-Wallis test: ???
 kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
             data = TotalVeg_change)
+
+
+#Plot results in a graph... https://www.scribbr.com/statistics/anova-in-r/
 ```
 
 
@@ -142,7 +161,7 @@ shapiro.test(TotalSpFo_change$mean_cover) #p-value <0.05 (0.01204) suggesting a 
 
 
 #ANOVA with interactive effects:
-Interactive <- lm(mean_cover ~ Shoreline_End*Log_Presence*Zone,
+Interactive <- aov(mean_cover ~ Shoreline_End*Log_Presence*Zone,
             data = TotalSpFo_change)
 
 summary(Interactive)
@@ -150,7 +169,7 @@ plot(Interactive)
 
 
 #ANOVA with additive effects:
-Additive <- lm(mean_cover ~ Log_Presence+Shoreline_End+Zone,
+Additive <- aov(mean_cover ~ Log_Presence+Shoreline_End+Zone,
             data = TotalSpFo_change)
 
 summary(Additive)
