@@ -94,7 +94,7 @@ GISveg_byZ <- GISvegdata %>%
 
 #Sq meters:
 ```{r}
-GISvegplot_byZ <- ggplot(GISveg_byZ, 
+GISvegplot_byZ_sm <- ggplot(GISveg_byZ, 
                      mapping = aes(x = Date,
                                    y = Sq_meters,
                                    group = Zone,
@@ -111,7 +111,7 @@ GISvegplot_byZ <- ggplot(GISveg_byZ,
     subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
     x = "Date of Survey",
     y ="Square Meters",
-    tag = "Veg_plots_GIS.Rmd-GISvegplot_byZ") +
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_byZ_sm") +
     #caption = "*Error bars reflect standard error",
   theme_bw(base_size = 10) +
   guides(shape = FALSE) + #turns off legend for shape
@@ -128,10 +128,47 @@ GISvegplot_byZ <- ggplot(GISveg_byZ,
         strip.text = element_text(size = 13, color = "black")) 
   
 
-GISvegplot_byZ
+GISvegplot_byZ_sm
 ```
 
+#Hectares:
+```{r}
+GISvegplot_byZ_h <- ggplot(GISveg_byZ, 
+                     mapping = aes(x = Date,
+                                   y = Hectares,
+                                   group = Zone,
+                                   color = Zone,
+                                   shape =  Zone)) +
+  geom_point(size = 3, position = position_dodge(0.2)) +
+  geom_line(linewidth = 0.8, position = position_dodge(0.2)) +
+  scale_color_manual(
+    name = "Marsh Zone",
+    values = c("#D55E00","#009E73", "#0072B2"),
+    labels = c("Upper", "Middle", "Lower")) +
+  labs( 
+    title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery",
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    x = "Date of Survey",
+    y ="Hectares",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_byZ_h") +
+    #caption = "*Error bars reflect standard error",
+  theme_bw(base_size = 10) +
+  guides(shape = FALSE) + #turns off legend for shape
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=12),
+        legend.text=element_text(size=10),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        plot.subtitle = element_text(size = 10),
+        strip.text = element_text(size = 13, color = "black")) 
+  
 
+GISvegplot_byZ_h
+```
 
 
 

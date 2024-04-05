@@ -11,6 +11,7 @@ library(ggpubr)
 library(tidyverse)
 library(broom)
 library(AICcmodavg)
+library(lme4)
 ```
 
 ```{r}
@@ -20,7 +21,7 @@ vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet 
 vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2")
 ```
 
-#Total Veg CHANGE:
+#Main DF:
 ```{r}
 ##
 #calculating change in cover for total veg (where total can exceed 25) and then the mean change for each zone, shoreline end, and log presence:
@@ -46,7 +47,7 @@ vegdata2 <- vegdata %>%
   rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
   mutate(across(c('SaPa', 'SaDe'), ~round(., 0))) %>% 
   #relocate(Log_Zone, .after = last_col()) %>%    #if you want to use log zone you need to upload the vegdata spreadsheet using the Data_2_LZ sheet.
-  mutate(across(SpFo:Grass, ~ .x*4)) %>% #makes everything into percentages
+  #mutate(across(SpFo:Grass, ~ .x*4)) %>% #makes everything into percentages
   mutate(Total_Veg2 = rowSums(across(SpFo:Grass))) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
   mutate(Date = paste0(Year, "-", Month)) #%>% 
 #filter(is.na(Log_Zone))  #remove rows where the quad that lands on log and the one quad that lands above and below are marked as "R" for remove
@@ -85,7 +86,6 @@ TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %
 #ANOVA
 ```{r}
 hist(TotalVeg_change$count_difference) #use count_difference or Total_veg2?
-shapiro.test(TotalVeg_change$count_difference) #p > 0.05, accept null that samples come from a normal distribution. Normal when using count_difference but not if you use Total_Veg2.
 
 
 #ANOVA with interactive effects:
@@ -94,9 +94,10 @@ Interactive <- aov(count_difference ~ Shoreline_End*Log_Presence*Zone,
 
 summary(Interactive)
 
+
 #Check for Homoscedacity:
 plot(Interactive)
-
+shapiro.test(Interactive$residuals)
 
 
 #ANOVA with additive effects:
@@ -132,6 +133,79 @@ kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
 
 #Plot results in a graph... https://www.scribbr.com/statistics/anova-in-r/
 ```
+
+
+
+
+#GLMM
+```{r}
+#GLMM with interactive effects:
+Interactive_glmm <- glmer(count_difference ~ Shoreline_End*Log_Presence*Zone+(1|Transect_ID), 
+                     family = gaussian(link = "identity"), 
+                     data = TotalVeg_change)
+
+summary(Interactive_glmm)
+
+#Check for Homoscedacity:
+
+      #For residuals vs fitted plot:
+
+      # Compute residuals
+      residuals <- resid(Interactive_glmm)
+      # Extract fitted values
+      fitted_values <- fitted(Interactive_glmm)
+      # Plot residuals vs fitted values
+      plot(fitted_values, residuals, xlab = "Fitted values", ylab = "Residuals", 
+           main = "Residuals vs Fitted Values")
+      abline(h = 0, col = "red", lty = 2)  # Add horizontal line at y = 0
+      
+
+      #For QQ plot:
+      
+      #Compute residuals:
+      residuals <- resid(Interactive_glmm)
+      # Generate theoretical quantiles
+      theoretical_quantiles <- qnorm(ppoints(length(residuals)))
+      # Create QQ plot
+      qqnorm(residuals)
+      qqline(residuals)
+      
+
+
+#GLMM with additive effects:
+Additive_glmm <- glmer(count_difference ~ Shoreline_End+Log_Presence+Zone+(1|Transect_ID), 
+                     family = gaussian(link = "identity"), 
+                     data = TotalVeg_change)
+
+summary(Additive_glmm)
+
+#For residuals vs fitted plot:
+
+      # Compute residuals
+      residuals <- resid(Additive_glmm)
+      # Extract fitted values
+      fitted_values <- fitted(Additive_glmm)
+      # Plot residuals vs fitted values
+      plot(fitted_values, residuals, xlab = "Fitted values", ylab = "Residuals", 
+           main = "Residuals vs Fitted Values")
+      abline(h = 0, col = "red", lty = 2)  # Add horizontal line at y = 0
+      
+
+      #For QQ plot:
+      
+      #Compute residuals:
+      residuals <- resid(Additive_glmm)
+      # Generate theoretical quantiles
+      theoretical_quantiles <- qnorm(ppoints(length(residuals)))
+      # Create QQ plot
+      qqnorm(residuals)
+      qqline(residuals)
+```
+
+
+
+
+
 
 
 # Total SpFo Change:
@@ -194,4 +268,3 @@ plot(TwoWay) #Some outliers having an influence?
 kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
             data = TotalVeg_change)
 ```
-
