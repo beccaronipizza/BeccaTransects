@@ -12,6 +12,7 @@ library(tidyverse)
 library(broom)
 library(AICcmodavg)
 library(lme4)
+library(car)
 ```
 
 ```{r}
@@ -64,11 +65,12 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
 # TOTAL VEG CHANGE:
 ```{r}
 TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #remove reference logs from calculation
-  filter(Date == "2022-August" | Date == "2023-August") %>%
+  #filter(Date == "2022-August" | Date == "2023-August") %>%
+  filter(Date == "2023-August") %>%
   group_by(Transect_ID, Quadrat) %>% 
   arrange(Date) %>% #arrange by date so the calculations can be made below
-  mutate(initial_count = first(Total_Veg2),
-         final_count = last(Total_Veg2),
+  mutate(initial_count = first(Total_Veg),
+         final_count = last(Total_Veg),
          count_difference = (final_count - initial_count)) %>%
   ungroup() %>% 
   filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
@@ -85,7 +87,7 @@ TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %
 
 #ANOVA
 ```{r}
-hist(TotalVeg_change$count_difference) #use count_difference or Total_veg2?
+hist(TotalVeg_change$Total_Veg2) #use count_difference or Total_Veg2?
 
 
 #ANOVA with interactive effects:
@@ -140,11 +142,30 @@ kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
 #GLMM
 ```{r}
 #GLMM with interactive effects:
-Interactive_glmm <- glmer(count_difference ~ Shoreline_End*Log_Presence*Zone+(1|Transect_ID), 
-                     family = gaussian(link = "identity"), 
+Interactive_glmm <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
                      data = TotalVeg_change)
 
-summary(Interactive_glmm)
+#NOT USEFUL: NO EFFECT OF LOG:
+#Interactive_glmm2 <-  glmer.nb(count_difference + 26 ~ Log_Presence*Zone+(1|Quadrat:Zone:Shoreline_End), #accounting for known variability in shoreline end and 
+                     data = TotalVeg_change)
+
+Interactive_glmm3 <-  glmer.nb(Total_Veg ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
+                      data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 ONLY
+
+#NOT USEFUL: NO EFFECT OF LOG: 
+#Interactive_glmm4 <-  glmer.nb(Total_Veg ~ Log_Presence*Zone+(1|Quadrat:Zone:Shoreline_End),
+                     #data = TotalVeg_change) #more interested in log presence than location
+
+Anova(Interactive_glmm4)
+emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) 
+
+# check_normality(Interactive_glmm) dont need*
+check_heteroscedasticity(Interactive_glmm)
+
+sim_res <- simulateResiduals( Interactive_glmm) # generates fitted model residuals
+plot( sim_res ) # draws diagnostic plots along with diagnostic tests
+testOverdispersion ( sim_res )
+
 
 #Check for Homoscedacity:
 
