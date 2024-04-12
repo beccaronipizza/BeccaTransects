@@ -139,7 +139,23 @@ kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
 
 
 
-#GLMM
+#GLMM with Julie:
+```{r}
+#GLMM with interactive effects:
+
+#LOAD the data using the count difference between Aug 2022 and Aug 2023!
+Interactive_glmm <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
+                     data = TotalVeg_change)
+
+#LOAD only August 2023 data for this one:
+Interactive_glmm3 <-  glmer.nb(Total_Veg ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
+                      data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
+
+Anova(Interactive_glmm)
+emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) 
+```
+
+#GLMM mixture of stuff I tried before and with Julie. See final Julie stuff above.
 ```{r}
 #GLMM with interactive effects:
 Interactive_glmm <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
@@ -147,14 +163,14 @@ Interactive_glmm <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence
 
 #NOT USEFUL: NO EFFECT OF LOG:
 #Interactive_glmm2 <-  glmer.nb(count_difference + 26 ~ Log_Presence*Zone+(1|Quadrat:Zone:Shoreline_End), #accounting for known variability in shoreline end and 
-                     data = TotalVeg_change)
+                       #data = TotalVeg_change)
 
 Interactive_glmm3 <-  glmer.nb(Total_Veg ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
-                      data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 ONLY
+                      data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
 
 #NOT USEFUL: NO EFFECT OF LOG: 
 #Interactive_glmm4 <-  glmer.nb(Total_Veg ~ Log_Presence*Zone+(1|Quadrat:Zone:Shoreline_End),
-                     #data = TotalVeg_change) #more interested in log presence than location
+                      #data = TotalVeg_change) #more interested in log presence than location
 
 Anova(Interactive_glmm4)
 emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) 
