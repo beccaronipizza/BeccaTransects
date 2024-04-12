@@ -151,8 +151,13 @@ Interactive_glmm <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence
 Interactive_glmm3 <-  glmer.nb(Total_Veg ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
                       data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
 
-Anova(Interactive_glmm)
-emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) 
+Anova(Interactive_glmm3)
+emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone)
+
+
+sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
+plot( sim_res ) # draws diagnostic plots along with diagnostic tests
+testDispersion ( sim_res )
 ```
 
 #GLMM mixture of stuff I tried before and with Julie. See final Julie stuff above.
@@ -175,7 +180,7 @@ Interactive_glmm3 <-  glmer.nb(Total_Veg ~ Shoreline_End*Log_Presence*Zone+(1|Qu
 Anova(Interactive_glmm4)
 emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) 
 
-# check_normality(Interactive_glmm) dont need*
+# check_normality(Interactive_glmm) dont need* Only for Gaussian models
 check_heteroscedasticity(Interactive_glmm)
 
 sim_res <- simulateResiduals( Interactive_glmm) # generates fitted model residuals
@@ -188,9 +193,9 @@ testOverdispersion ( sim_res )
       #For residuals vs fitted plot:
 
       # Compute residuals
-      residuals <- resid(Interactive_glmm)
+      residuals <- resid(Interactive_glmm3)
       # Extract fitted values
-      fitted_values <- fitted(Interactive_glmm)
+      fitted_values <- fitted(Interactive_glmm3)
       # Plot residuals vs fitted values
       plot(fitted_values, residuals, xlab = "Fitted values", ylab = "Residuals", 
            main = "Residuals vs Fitted Values")
@@ -231,7 +236,7 @@ summary(Additive_glmm)
       #For QQ plot:
       
       #Compute residuals:
-      residuals <- resid(Additive_glmm)
+      residuals <- resid(Interactive_glmm3)
       # Generate theoretical quantiles
       theoretical_quantiles <- qnorm(ppoints(length(residuals)))
       # Create QQ plot
