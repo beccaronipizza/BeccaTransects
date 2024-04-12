@@ -214,7 +214,7 @@ Anova(sedpin_glmm1)
 emmeans(Interactive_glmm, pairwise ~ Shoreline_End|Zone)
 
 
-sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
+sim_res <- simulateResiduals(sedpin_glmm1) # generates fitted model residuals
 plot( sim_res ) # draws diagnostic plots along with diagnostic tests
 testDispersion ( sim_res )
 

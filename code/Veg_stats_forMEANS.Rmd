@@ -13,6 +13,7 @@ library(broom)
 library(AICcmodavg)
 library(lme4)
 library(car)
+library(DHARMa)
 ```
 
 ```{r}
@@ -141,21 +142,22 @@ kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
 
 #GLMM with Julie:
 ```{r}
+
 #GLMM with interactive effects:
 
 #LOAD the data using the count difference between Aug 2022 and Aug 2023!
 Interactive_glmm <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
                      data = TotalVeg_change)
 
-#LOAD only August 2023 data for this one:
+#LOAD only August 2023 data for this one. Use "Total_Veg" column for response variable:
 Interactive_glmm3 <-  glmer.nb(Total_Veg ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
                       data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
 
-Anova(Interactive_glmm3)
-emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone)
+Anova(Interactive_glmm)
+emmeans(Interactive_glmm, pairwise ~ Shoreline_End|Zone)
 
 
-sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
+sim_res <- simulateResiduals(Interactive_glmm3) # generates fitted model residuals
 plot( sim_res ) # draws diagnostic plots along with diagnostic tests
 testDispersion ( sim_res )
 ```
@@ -177,13 +179,13 @@ Interactive_glmm3 <-  glmer.nb(Total_Veg ~ Shoreline_End*Log_Presence*Zone+(1|Qu
 #Interactive_glmm4 <-  glmer.nb(Total_Veg ~ Log_Presence*Zone+(1|Quadrat:Zone:Shoreline_End),
                       #data = TotalVeg_change) #more interested in log presence than location
 
-Anova(Interactive_glmm4)
+Anova(Interactive_glmm3)
 emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) 
 
 # check_normality(Interactive_glmm) dont need* Only for Gaussian models
 check_heteroscedasticity(Interactive_glmm)
 
-sim_res <- simulateResiduals( Interactive_glmm) # generates fitted model residuals
+sim_res <- simulateResiduals(Interactive_glmm3) # generates fitted model residuals
 plot( sim_res ) # draws diagnostic plots along with diagnostic tests
 testOverdispersion ( sim_res )
 

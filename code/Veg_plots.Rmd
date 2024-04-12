@@ -384,7 +384,8 @@ cbp <- c("#F0E442", "#CC79A7", "#0072B2","#D55E00", "#009E73", "#56B4E9","#E69F0
 TotalVeg_change_barplot <- ggplot(TotalVeg_change, 
                         mapping = aes(x = Zone,
                                 y = mean_cover,
-                                fill = Zone,
+                                group = Log_Presence,
+                                fill = Log_Presence,
                                 color =Zone)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_errorbar(aes(ymin = mean_cover - se_cover,
@@ -392,15 +393,82 @@ TotalVeg_change_barplot <- ggplot(TotalVeg_change,
                 size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
-  facet_grid(Log_Presence ~ Shoreline_End) +
+  facet_grid(~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(-10, 55)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(0, 45)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Mean % Change in Total Vegetation Cover",
     subtitle = "August 2022 to August 2023",
     x = "Marsh Zone",
     y ="Total Vegetation Cover (%)",
-    fill = "Marsh Zone",
+    fill = "Log Presence",
+    caption = "*Error bars reflect standard error",
+    tag = "Veg_plots.Rmd-TotalVeg_change_barplot") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=14),
+        legend.title = element_text(face = "bold", size=14),
+        legend.text=element_text(size=12),
+        #legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 13),
+        plot.caption = element_text(size = 11),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_text(aes(label = mean_cover, y=0), #geom text is for the labels over the bars
+                vjust = -.5,  #higher values shift text down                
+                #hjust = 0.5, #higher values shift text horizontally left
+                position = position_dodge(0.85),
+                color = "black",
+            size = 3.25)
+
+TotalVeg_change_barplot
+```
+
+#Total Veg Change Barplot without Log Presence:
+```{r}
+TotalVeg_change2 <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+        Zone = factor(Zone, levels = c("U", "M", "L")))
+         #Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+```{r}
+TotalVeg_change_barplot2 <- ggplot(TotalVeg_change2, 
+                        mapping = aes(x = Zone,
+                                y = mean_cover,
+                                color = Zone,
+                                fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(0, 45)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Change in Total Vegetation Cover",
+    subtitle = "August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+   #fill = "Log Presence",
     caption = "*Error bars reflect standard error",
     tag = "Veg_plots.Rmd-TotalVeg_change_barplot") +
   theme_bw(base_size = 10) +
@@ -416,16 +484,15 @@ TotalVeg_change_barplot <- ggplot(TotalVeg_change,
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_text(aes(label = mean_cover), #geom text is for the labels over the bars
-                vjust = -2.5,  #higher values shift text down
-                hjust = 0.5, #higher values shift text horizontally left
-                position = position_stack(),
+  geom_text(aes(label = mean_cover, y=0), #geom text is for the labels over the bars
+                vjust = -.5,  #higher values shift text down                
+                #hjust = 0.5, #higher values shift text horizontally left
+                position = position_dodge(0.85),
                 color = "black",
             size = 3.25)
 
-TotalVeg_change_barplot
+TotalVeg_change_barplot2
 ```
-
 
 # ##################################################################################################################################### #
 
