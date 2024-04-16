@@ -395,7 +395,7 @@ TotalVeg_change_barplot <- ggplot(TotalVeg_change,
   scale_fill_manual(values = cbp) +
   facet_grid(~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(0, 45)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(-5, 45)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Mean % Change in Total Vegetation Cover",
     subtitle = "August 2022 to August 2023",
@@ -405,24 +405,35 @@ TotalVeg_change_barplot <- ggplot(TotalVeg_change,
     caption = "*Error bars reflect standard error",
     tag = "Veg_plots.Rmd-TotalVeg_change_barplot") +
   theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=14),
-        legend.title = element_text(face = "bold", size=14),
-        legend.text=element_text(size=12),
-        #legend.position = "none",
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
         axis.text.x = element_text(size = 11),
         axis.text.y = element_text(size = 10),
-        plot.title = element_text(face = "bold", size = 13),
-        plot.caption = element_text(size = 11),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
         plot.subtitle = element_text(size = 11),
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_text(aes(label = mean_cover, y=0), #geom text is for the labels over the bars
-                vjust = -.5,  #higher values shift text down                
-                #hjust = 0.5, #higher values shift text horizontally left
-                position = position_dodge(0.85),
-                color = "black",
-            size = 3.25)
+  #geom_text(aes(label = mean_cover, y=0), #geom text is for the labels over the bars
+   #             vjust = -.5,  #higher values shift text down                
+    #            #hjust = 0.5, #higher values shift text horizontally left
+     #           position = position_dodge(0.85),
+      #          color = "black",
+       #     size = 3.25) +
+  geom_label(aes(label = mean_cover, y = -07),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
 
 TotalVeg_change_barplot
 ```
@@ -462,7 +473,7 @@ TotalVeg_change_barplot2 <- ggplot(TotalVeg_change2,
   scale_fill_manual(values = cbp) +
   facet_grid(~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(0, 45)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(0, 40)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Mean % Change in Total Vegetation Cover",
     subtitle = "August 2022 to August 2023",
@@ -523,7 +534,8 @@ SaPa_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>%
 SaPa_change_barplot <- ggplot(SaPa_change, 
                         mapping = aes(x = Zone,
                                 y = mean_cover,
-                                fill = Zone,
+                                group = Log_Presence,
+                                fill = Log_Presence,
                                 color =Zone)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_errorbar(aes(ymin = mean_cover - se_cover,
@@ -531,9 +543,9 @@ SaPa_change_barplot <- ggplot(SaPa_change,
                 size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
-  facet_grid(Log_Presence ~ Shoreline_End) +
+  facet_grid(~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(-15, 30)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(-25, 30)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = expression(paste(bold("Mean % Change in " *italic("Salicornia pacifica")* " Cover"))),
     subtitle = "August 2022 to August 2023",
@@ -543,24 +555,35 @@ SaPa_change_barplot <- ggplot(SaPa_change,
     caption = "*Error bars reflect standard error",
     tag = "Veg_plots.Rmd-SaPa_change_barplot") +
   theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=14),
-        #legend.title = element_text(face = "bold", size=14),
-        #legend.text=element_text(size=12),
-        legend.position = "none",
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
         axis.text.x = element_text(size = 11),
         axis.text.y = element_text(size = 10),
-        plot.title = element_text(face = "bold", size = 13),
-        plot.caption = element_text(size = 11),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
         plot.subtitle = element_text(size = 11),
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_text(aes(label = mean_cover, y = mean_cover + se_cover), #geom text is for the labels over the bars
-                vjust = -1,  #higher values shift text down
-                hjust = 0.5, #higher values shift text horizontally left
-                position = position_stack(),
-                color = "black",
-            size = 3.25)
+   #geom_text(aes(label = mean_cover, y= -25), #geom text is for the labels over the bars
+    #             vjust = -.5,  #higher values shift text down                
+     #            #hjust = 0.5, #higher values shift text horizontally left
+      #           position = position_dodge(0.85),
+       #          color = "black",
+        #     size = 3.25)
+  geom_label(aes(label = mean_cover, y = -25),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
 
 SaPa_change_barplot
 ```
@@ -595,7 +618,8 @@ SpFo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>%
 SpFo_change_barplot <- ggplot(SpFo_change, 
                         mapping = aes(x = Zone,
                                 y = mean_cover,
-                                fill = Zone,
+                                group = Log_Presence,
+                                fill = Log_Presence,
                                 color =Zone)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_errorbar(aes(ymin = mean_cover - se_cover,
@@ -603,9 +627,9 @@ SpFo_change_barplot <- ggplot(SpFo_change,
                 size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
-  facet_grid(Log_Presence ~ Shoreline_End) +
+  facet_grid(~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(-5, 50)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(-5, 40)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = expression(paste(bold("Mean % Change in " *italic("Spartina foliosa")* " Cover"))),
     subtitle = "August 2022 to August 2023",
@@ -615,24 +639,35 @@ SpFo_change_barplot <- ggplot(SpFo_change,
     caption = "*Error bars reflect standard error",
     tag = "Veg_plots.Rmd-SpFo_change_barplot") +
   theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=14),
-        #legend.title = element_text(face = "bold", size=14),
-        #legend.text=element_text(size=12),
-        legend.position = "none",
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
         axis.text.x = element_text(size = 11),
         axis.text.y = element_text(size = 10),
-        plot.title = element_text(face = "bold", size = 13),
-        plot.caption = element_text(size = 11),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
         plot.subtitle = element_text(size = 11),
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_text(aes(label = mean_cover, y = mean_cover + se_cover), #geom text is for the labels over the bars
-                vjust = -1,  #higher values shift text down
-                hjust = 0.5, #higher values shift text horizontally left
-                position = position_stack(),
-                color = "black",
-            size = 3.25)
+  #geom_text(aes(label = mean_cover, y=-1), #geom text is for the labels over the bars
+   #             vjust = -.5,  #higher values shift text down                
+    #            #hjust = 0.5, #higher values shift text horizontally left
+     #           position = position_dodge(0.85),
+      #          color = "black",
+       #     size = 3.25) +
+  geom_label(aes(label = mean_cover, y = -08),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
 
 SpFo_change_barplot
 ```

@@ -66,8 +66,8 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
 # TOTAL VEG CHANGE:
 ```{r}
 TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #remove reference logs from calculation
-  #filter(Date == "2022-August" | Date == "2023-August") %>%
-  filter(Date == "2023-August") %>%
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  #filter(Date == "2023-August") %>%
   group_by(Transect_ID, Quadrat) %>% 
   arrange(Date) %>% #arrange by date so the calculations can be made below
   mutate(initial_count = first(Total_Veg),
@@ -142,22 +142,23 @@ kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
 
 #GLMM with Julie:
 ```{r}
-
+hist(TotalVeg_change$Total_Veg)
 #GLMM with interactive effects:
 
 #LOAD the data using the count difference between Aug 2022 and Aug 2023!
 Interactive_glmm <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
                      data = TotalVeg_change)
 
+#DON'T use this for now!! Not NORMAL!!
 #LOAD only August 2023 data for this one. Use "Total_Veg" column for response variable:
-Interactive_glmm3 <-  glmer.nb(Total_Veg ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
+Interactive_glmm3 <-  lmer(sqrt(Total_Veg + 1) ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
                       data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
 
 Anova(Interactive_glmm)
-emmeans(Interactive_glmm, pairwise ~ Shoreline_End|Zone)
+emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone)
+check_normality(Interactive_glmm3) #library(performance)
 
-
-sim_res <- simulateResiduals(Interactive_glmm3) # generates fitted model residuals
+sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
 plot( sim_res ) # draws diagnostic plots along with diagnostic tests
 testDispersion ( sim_res )
 ```
