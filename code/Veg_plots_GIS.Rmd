@@ -38,16 +38,16 @@ cbp <- c("#D55E00","#009E73", "#0072B2", "#F0E442", "#CC79A7", "#56B4E9","#E69F0
 GISveg_byshoreline <- GISvegdata %>% 
   mutate(Date = paste0(Year, "-", Month)) %>% 
   select(-Shapefile, -Month, -Year) %>% 
-  filter(Zone == "All" & Shoreline_end != "both") %>% 
+  filter(Zone == "All" & Shoreline_end != "Both") %>% 
   group_by(Shoreline_end)
   
 ```
 
-#Sq meters:
+#Hectares:
 ```{r}
 GISvegplot <- ggplot(GISveg_byshoreline, 
                      mapping = aes(x = Date,
-                                   y = Sq_meters,
+                                   y = Hectares,
                                    group = Shoreline_end,
                                    color = Shoreline_end)) +
   geom_point(size = 3) +
@@ -58,7 +58,7 @@ GISvegplot <- ggplot(GISveg_byshoreline,
     title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery",
     subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
     x = "Date of Survey",
-    y ="Square Meters",
+    y ="Hectares",
     #caption = "*Error bars reflect standard error",
     fill = "Shoreline End") +
   theme_bw(base_size = 10) +
@@ -81,54 +81,15 @@ GISvegplot
 
 
 
-# Creating a data frame for all three zones, but with both shoreline ends combined:
+# Creating a data frame for all three zones, but with both shoreline ends combined: *Is this helpful??
 ```{r}
 GISveg_byZ <- GISvegdata %>% 
   mutate(Date = paste0(Year, "-", Month)) %>% 
   select(-Shapefile, -Month, -Year) %>% 
-  filter(Zone != "All" & Shoreline_end == "both") %>%
+  filter(Zone != "All" & Shoreline_end == "Both") %>%
   mutate(Zone = factor(Zone, levels = c("Upper", "Middle", "Lower"))) %>% #make it so that they get plotted int he correct order
   group_by(Zone)
   
-```
-
-#Sq meters:
-```{r}
-GISvegplot_byZ_sm <- ggplot(GISveg_byZ, 
-                     mapping = aes(x = Date,
-                                   y = Sq_meters,
-                                   group = Zone,
-                                   color = Zone,
-                                   shape =  Zone)) +
-  geom_point(size = 3, position = position_dodge(0.2)) +
-  geom_line(linewidth = 0.8, position = position_dodge(0.2)) +
-  scale_color_manual(
-    name = "Marsh Zone",
-    values = c("#D55E00","#009E73", "#0072B2"),
-    labels = c("Upper", "Middle", "Lower")) +
-  labs( 
-    title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery",
-    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
-    x = "Date of Survey",
-    y ="Square Meters",
-    tag = "Veg_plots_GIS.Rmd-GISvegplot_byZ_sm") +
-    #caption = "*Error bars reflect standard error",
-  theme_bw(base_size = 10) +
-  guides(shape = FALSE) + #turns off legend for shape
-  theme(axis.title = element_text(face = "bold", size=12),
-        legend.title = element_text(face = "bold", size=12),
-        legend.text=element_text(size=10),
-        axis.text.x = element_text(size = 09),
-        axis.text.y = element_text(size = 09),
-        plot.title = element_text(face = "bold", size = 11),
-        plot.caption = element_text(size = 10),
-        plot.tag = element_text(size = 6, angle = 90),
-        plot.tag.position = "right",
-        plot.subtitle = element_text(size = 10),
-        strip.text = element_text(size = 13, color = "black")) 
-  
-
-GISvegplot_byZ_sm
 ```
 
 #Hectares:
@@ -172,38 +133,37 @@ GISvegplot_byZ_h
 
 
 
-# Creating a data frame with all years broken up by zone and shoreline end:
+
 #Creating a data frame with all three zones combined and broken up by shoreline end:
 ```{r}
 GISveg_byZandS <- GISvegdata %>% 
   mutate(Date = paste0(Year, "-", Month)) %>% 
   select(-Shapefile, -Month) %>% 
-  filter(Zone != "All", Shoreline_end != "both") %>% 
-  mutate(Shoreline_end = factor(Shoreline_end, levels = c("west", "east")),
-         Zone = factor(Zone, levels = c("Upper", "Middle", "Lower"))) %>% #make it sot hat facet grid orders shoreline end from west to east
+  filter(Zone == "All" & Shoreline_end != "Both") %>% 
+  mutate(Shoreline_end = factor(Shoreline_end, levels = c("West", "East")),
+         Zone = factor(Zone, levels = c("Upper", "Middle", "Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
   group_by(Date, Zone, Shoreline_end) 
 ```
 
-# *Sq meters: Barplot faceted with Shoreline end and year, broken up by zone: 
 ```{r}
-GISvegplot_byZandS <- ggplot(GISveg_byZandS, 
-                     mapping = aes(x = Zone,
-                                   y = Sq_meters,
-                                   color = Zone,
-                                   fill = Zone)) +
+GISvegplot_byZandS<- ggplot(GISveg_byZandS, 
+                     mapping = aes(x = Shoreline_end,
+                                   y = Hectares,
+                                   color = Shoreline_end,
+                                   fill = Shoreline_end)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   scale_fill_manual(values = cbp) +
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
-  facet_grid(Shoreline_end ~ Year) +
+  facet_grid(~ Year) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(0, 9000)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(0, 1.5)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Sears Point Vegetation Cover Change Over 3 Years via GIS & Aerial Imagery",
     subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
     caption = "*This plot depicts vegetation solely within Becca Morris's Thesis Project Extent 
     and does not encompass the entire Sears Point Adaptive Management Project Restoration",
-    x = "Marsh Zone",
-    y ="Square Meters",
+    x = "Shoreline End",
+    y ="Hectares",
     #caption = "*Error bars reflect standard error",
     fill = "Shoreline End",
     tag = "Veg_plots_GIS.Rmd-GISvegplot_byZandS") +
@@ -220,7 +180,7 @@ GISvegplot_byZandS <- ggplot(GISveg_byZandS,
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_text(aes(label = Sq_meters), #geom text is for the labels over the bars
+  geom_text(aes(label = Hectares), #geom text is for the labels over the bars
                 vjust = -0.8,  #higher values shift text down
                 hjust = 0.5, #higher values shift text horizontally left
                 position = position_stack(),
@@ -233,7 +193,7 @@ GISvegplot_byZandS
 
 # *Hectares: Barplot faceted with Shoreline end and year, broken up by zone: 
 ```{r}
-GISvegplot_byZandS_h <- ggplot(GISveg_byZandS, 
+GISvegplot_byZandS<- ggplot(GISveg_byZandS, 
                      mapping = aes(x = Zone,
                                    y = Hectares,
                                    color = Zone,
