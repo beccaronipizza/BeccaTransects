@@ -142,11 +142,12 @@ GISveg_byZandS <- GISvegdata %>%
   filter(Zone == "All" & Shoreline_end != "Both") %>% 
   mutate(Shoreline_end = factor(Shoreline_end, levels = c("West", "East")),
          Zone = factor(Zone, levels = c("Upper", "Middle", "Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
+  mutate(across(where(is.numeric), ~round(., 2))) %>% 
   group_by(Date, Zone, Shoreline_end) 
 ```
 
 ```{r}
-GISvegplot_byZandS<- ggplot(GISveg_byZandS, 
+GISvegplot_byYandS<- ggplot(GISveg_byZandS, 
                      mapping = aes(x = Shoreline_end,
                                    y = Hectares,
                                    color = Shoreline_end,
@@ -166,7 +167,7 @@ GISvegplot_byZandS<- ggplot(GISveg_byZandS,
     y ="Hectares",
     #caption = "*Error bars reflect standard error",
     fill = "Shoreline End",
-    tag = "Veg_plots_GIS.Rmd-GISvegplot_byZandS") +
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_byYandS") +
   theme_bw(base_size = 10) +
   guides(fill = FALSE) + #turns off legend for fill
   theme(axis.title = element_text(face = "bold", size=12),
@@ -188,12 +189,24 @@ GISvegplot_byZandS<- ggplot(GISveg_byZandS,
                 size = 3.25)
   
 
-GISvegplot_byZandS
+GISvegplot_byYandS
 ```
+
+#Creating a data frame with all three zones seperated and faceted by shoreline end and year:
+```{r}
+GISveg_byZYandS <- GISvegdata %>% 
+  mutate(Date = paste0(Year, "-", Month)) %>%
+  select(-Shapefile, -Month) %>% 
+  filter(Zone != "All") %>% 
+  mutate(across(where(is.numeric), ~round(., 2))) %>% 
+  mutate(Shoreline_end = factor(Shoreline_end, levels = c("West","East")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) #make it so that facet grid orders shoreline end from west to east
+```
+
 
 # *Hectares: Barplot faceted with Shoreline end and year, broken up by zone: 
 ```{r}
-GISvegplot_byZandS<- ggplot(GISveg_byZandS, 
+GISvegplot_byZYandS<- ggplot(GISveg_byZYandS, 
                      mapping = aes(x = Zone,
                                    y = Hectares,
                                    color = Zone,
@@ -213,7 +226,7 @@ GISvegplot_byZandS<- ggplot(GISveg_byZandS,
     y ="Hectares",
     #caption = "*Error bars reflect standard error",
     fill = "Shoreline End",
-    tag = "Veg_plots_GIS.Rmd-GISvegplot_byZandS_h") +
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_byZYandS") +
   theme_bw(base_size = 10) +
   guides(fill = FALSE) + #turns off legend for fill
   theme(axis.title = element_text(face = "bold", size=12),
@@ -235,7 +248,7 @@ GISvegplot_byZandS<- ggplot(GISveg_byZandS,
                 size = 3.25)
   
 
-GISvegplot_byZandS_h
+GISvegplot_byZYandS
 ```
 
 
