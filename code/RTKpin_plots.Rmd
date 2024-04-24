@@ -56,10 +56,10 @@ RTKpinschangeEvW <- RTKpins %>%
 
 # EvW *ONLY* Plot:
 ```{r}
-cbp <- c("#D55E00", "#009E73", "#56B4E9", "#F0E442" , "#E69F00", "#000000", "#0072B2", "#CC79A7")
+cbprtk <- c("#009E73", "#56B4E9", "#F0E442" , "#E69F00", "#000000", "#0072B2","#D55E00", "#CC79A7","#999999")
+```
 
-
-
+```{r}
 RTKpinEvWplot <- ggplot(RTKpinschangeEvW, aes(x= Pin_Location, y= mean_difference, 
                                                          group= Shoreline_End, 
                                                          fill= Shoreline_End)) +
@@ -69,25 +69,46 @@ RTKpinEvWplot <- ggplot(RTKpinschangeEvW, aes(x= Pin_Location, y= mean_differenc
     ymin= mean_difference-se_difference, ymax= mean_difference+se_difference), size = 0.5, 
     position = position_dodge(0.9), color= "black", width= .1) +
   scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff")) +  #labels renames the columns on the x-acis and limits sets the order in which each is laid out on the x axis
-  scale_fill_manual(values = cbp) +
+  coord_cartesian(ylim = c(-6.5, 5)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  scale_fill_manual(values = cbprtk) +
   labs(
     title = "RTK Measurement: Mean Change in Sediment Pin Length",
-    subtitle = "(Jun 2022 to Sept 2023)   Positive value = accretion   Negative value = erosion",
+    subtitle = "Jun 2022 to Sept 2023   (Positive value = accretion   Negative value = erosion)",
     y = "Mean Change (cm)",
     x = "    Pin Location Relative to Transect Marsh Zone",
     fill= "End of Shoreline",
+    tag = "RTKpin_plots.Rmd_RTKpinEvWplot",
     caption = "*Error bars reflect standard error") +
   theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=17),
-        legend.title = element_text(face = "bold", size=17),
-        legend.text=element_text(size=16),
-        axis.text.x = element_text(size = 16),
-        axis.text.y = element_text(size = 14),
-        plot.title = element_text(face = "bold", size = 16),
-        plot.subtitle = element_text(size = 12),
-        plot.caption = element_text(size = 15, hjust = 0.1),
-        panel.border = element_rect(color = "black", fill = NA, size = 0.5),
-        strip.text = element_text(size = 18, color = "black")) 
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  #geom_text(aes(label = Hectares), #geom text is for the labels over the bars
+   #             vjust = -0.8,  #higher values shift text down
+    #            hjust = 0.5, #higher values shift text horizontally left
+     #           position = position_stack(),
+      #          color = "black",
+       #         size = 3.25) +
+  geom_label(aes(label = mean_difference, y = -7.2),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
 
 RTKpinEvWplot
 ```
@@ -128,9 +149,9 @@ RTKpinLvNLplot <- ggplot(RTKpinschangeLvNL,
   geom_errorbar(aes(ymin= mean_difference-se_difference, ymax= mean_difference+se_difference), size = 0.5, 
     position = position_dodge(0.9), color= "black", width= .1) +
   scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff")) +  #labels renames the columns on the x-axis and limits sets the order in which each is laid out on the x axis
-  coord_cartesian(ylim = c(-10, 10)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(-7, 8)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   facet_grid(~ Shoreline_End) +
-  scale_fill_manual(values = cbp2) +
+  scale_fill_manual(values = cbprtk) +
   labs(
     title = "RTK Measurement: Mean Change in Sediment Pin Length ",
     subtitle = "Jun 2022 to Sept 2023   (Positive value = accretion   Negative value = erosion)",
@@ -138,7 +159,7 @@ RTKpinLvNLplot <- ggplot(RTKpinschangeLvNL,
     x = "   Pin Location Relative to Transect Marsh Zone",
     fill= "Log Presence",
     caption = "*Error bars reflect standard error     *n=10 west/log, n=7 west/no log, n=11 east/log, n=9 east/no log",
-    tag = "RTKpin_plots.Rmd-RTK_change_barplot") +
+    tag = "RTKpin_plots.Rmd-RTKpinLvNLplot") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=13),
         legend.title = element_text(face = "bold", size=09),
@@ -161,7 +182,7 @@ RTKpinLvNLplot <- ggplot(RTKpinschangeLvNL,
      #           position = position_dodge(0.85),
       #          color = "black",
        #     size = 3.25) +
-  geom_label(aes(label = mean_difference, y = -10),  # Adjust the x-coordinate
+  geom_label(aes(label = mean_difference, y = -8),  # Adjust the x-coordinate
            vjust = -0.5,
            color = "black",
            position = position_dodge(0.85),

@@ -19,7 +19,7 @@ library(mdthemes)
 setwd("~/GitHub/BeccaTransects/data")
 
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
-vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2") #for log zone removal use sheet = "Data2_LZ" <- make sure htat right name
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2") #Reference xs removed. For log zone removal use sheet = "Data2_LZ" <- make sure that right name
 ```
 # !!!!! USE this set up only for the plots below.  FOr CHANGE barplots, set up the df down lower!!
 ```{r}
@@ -357,7 +357,7 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
 ```
 
 ```{r}
-TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #filtering out reference transects
   filter(Date == "2022-August" | Date == "2023-August") %>%
   group_by(Transect_ID, Quadrat) %>% 
   arrange(Date) %>% #arrange by date so the calculations can be made below
@@ -459,13 +459,14 @@ TotalVeg_change2 <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] 
         Zone = factor(Zone, levels = c("U", "M", "L")))
          #Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
+
 ```{r}
 TotalVeg_change_barplot2 <- ggplot(TotalVeg_change2, 
                                 mapping = aes(x = Zone,
                                 y = mean_cover,
-                                group = Log_Presence,
-                                fill = Log_Presence,
-                                color =Zone)) +
+                                group = Zone,
+                                fill = Zone)) +
+                                #color = Zone)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_errorbar(aes(ymin = mean_cover - se_cover,
                     ymax = mean_cover + se_cover),
@@ -474,7 +475,7 @@ TotalVeg_change_barplot2 <- ggplot(TotalVeg_change2,
   scale_fill_manual(values = cbp) +
   facet_grid(~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(0, 40)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(-4, 40)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Mean % Change in Total Vegetation Cover",
     subtitle = "August 2022 to August 2023",
@@ -482,7 +483,7 @@ TotalVeg_change_barplot2 <- ggplot(TotalVeg_change2,
     y ="Total Vegetation Cover (%)",
    #fill = "Log Presence",
     caption = "*Error bars reflect standard error",
-    tag = "Veg_plots.Rmd-TotalVeg_change_barplot") +
+    tag = "Veg_plots.Rmd-TotalVeg_change_barplot2") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=14),
         #legend.title = element_text(face = "bold", size=14),
@@ -496,12 +497,14 @@ TotalVeg_change_barplot2 <- ggplot(TotalVeg_change2,
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_text(aes(label = mean_cover, y=0), #geom text is for the labels over the bars
-                vjust = -.5,  #higher values shift text down                
-                #hjust = 0.5, #higher values shift text horizontally left
-                position = position_dodge(0.85),
-                color = "black",
-            size = 3.25)
+  geom_label(aes(label = mean_cover, y = -05),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
 
 TotalVeg_change_barplot2
 ```
