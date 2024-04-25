@@ -299,14 +299,19 @@ GISvegplot_TotalVeg_change<- ggplot(TotalVeg_change_GIS,
 
 GISvegplot_TotalVeg_change
 ```
+
+
+
+# ###  Percent Change ### #
+
 #Now to Plot Veg Percent Change for Dec 2021 to Aug 2023:
 ```{r}
 GIS_PercChange_byZandS <- GISvegdata_percent %>% 
   filter(Zone !="All") %>% 
-  filter(Initial_year == "2021" & Final_year == "2023") %>% 
+  filter(year == "3") %>% 
   mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
          Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
-  select(Zone, Shore_end, Percent_change, Initial_year) %>% 
+  select(Zone, Shore_end, Percent_change, Initial_year, Final_year, year) %>% 
   mutate(across(where(is.numeric), ~round(., 0))) 
   
 ```
@@ -322,7 +327,7 @@ GIS_veg_PercentChange <- ggplot(GIS_PercChange_byZandS,
   scale_fill_manual(values = cbp) +
   facet_grid(~ Shore_end) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(-4, 53)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(-4, 60)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Sears Point % Veg Cover Change After 2 Year via GIS & Aerial Imagery",
     subtitle = "December 2021 to August 2023",
@@ -379,7 +384,7 @@ GIS_veg_PercentChange_yr1<- ggplot(GIS_PercChange_byZandS,
   scale_fill_manual(values = cbp) +
   facet_grid(~ Shore_end) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(-12, 80)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  coord_cartesian(ylim = c(-3, 60)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Sears Point % Veg Cover Change After 1 Year via GIS & Aerial Imagery",
     subtitle = "December 2021 to August 2022",
@@ -401,7 +406,7 @@ GIS_veg_PercentChange_yr1<- ggplot(GIS_PercChange_byZandS,
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_label(aes(label = Percent_change, y = -17),  # Adjust the x-coordinate
+  geom_label(aes(label = Percent_change, y = -6.5),  # Adjust the x-coordinate
            vjust = -0.5,
            color = "black",
            position = position_dodge(0.85),
@@ -420,7 +425,7 @@ GIS_PercChange_byZandS_yr2 <- GISvegdata_percent %>%
   filter(year == "2") %>% 
   mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
          Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
-  select(Zone, Shore_end, Percent_change, Initial_year) %>% 
+  select(Zone, Shore_end, Percent_change, Initial_year, Final_year) %>% 
   mutate(across(where(is.numeric), ~round(., 0))) 
 
 ```
@@ -480,7 +485,7 @@ GIS_PercChange_byZandS_v3 <- GISvegdata_percent %>%
   mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
          Zone = factor(Zone, levels = c("Upper","Middle","Lower")),
          year = factor(year, levels = c("1", "2"))) %>% #make it so that facet grid orders shoreline end from west to east
-  select(Zone, Shore_end, Percent_change, Initial_year, Final_year, year) %>% 
+  select(Zone, Shore_end, Percent_change, year, Initial_year, Final_year) %>% 
   mutate(across(where(is.numeric), ~round(., 0))) %>% 
   group_by(Shore_end, Zone, year)
 
@@ -490,6 +495,7 @@ GIS_PercChange_byZandS_v3 <- GISvegdata_percent %>%
 GIS_veg_PercentChange_v3<- ggplot(GIS_PercChange_byZandS_v3,
                                mapping = aes(x = Zone,
                                              y = Percent_change,
+                                             group = year,
                                              fill = year)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
@@ -498,8 +504,8 @@ GIS_veg_PercentChange_v3<- ggplot(GIS_PercChange_byZandS_v3,
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
   coord_cartesian(ylim = c(-15, 80)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
-    title = "Sears Point % Veg Cover Change via GIS & Aerial Imagery",
-    subtitle = "Year 1 and Year 2 Comparison",
+    title = "Sears Point % Veg Cover Change Year 1 and Year 2 Comparison via GIS & Aerial Imagery",
+    subtitle = "Year 1 = Dec 2021 to Aug 2022      Year 2 = Aug 2022 to Aug 2023",
     x = "Marsh Zone",
     y ="Total Vegetation Cover (%)",
    fill = "Year",
@@ -511,7 +517,7 @@ GIS_veg_PercentChange_v3<- ggplot(GIS_PercChange_byZandS_v3,
         legend.text=element_text(size=09),
         legend.position = "top",   #for no legend type: "none"
         legend.background = element_rect(fill="lightgrey",
-                                  size=0.5, linetype="solid", 
+                                  linewidth =0.5, linetype="solid", 
                                   colour ="darkgrey"),
         axis.text.x = element_text(size = 11),
         axis.text.y = element_text(size = 10),
@@ -521,7 +527,7 @@ GIS_veg_PercentChange_v3<- ggplot(GIS_PercChange_byZandS_v3,
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
         strip.text = element_text(size = 13, color = "black")) +
-  geom_label(aes(label = Percent_change, y = -21.5),  # Adjust the x-coordinate
+  geom_label(aes(label = Percent_change, y = -21.25),  # Adjust the x-coordinate
            vjust = -0.5,
            color = "black",
            position = position_dodge(0.85),
@@ -529,6 +535,8 @@ GIS_veg_PercentChange_v3<- ggplot(GIS_PercChange_byZandS_v3,
            fill = "lightgrey",
            label.padding = unit(0.15, "lines"),
            label.r = unit(0.15, "lines"))
+           
+
 
 GIS_veg_PercentChange_v3
   

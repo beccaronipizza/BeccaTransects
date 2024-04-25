@@ -81,7 +81,7 @@ sedpinplotEvW <- ggplot(sedpinchange, aes(x= Pin_Location, y= mean_difference,
   scale_fill_manual(values = cbpsed) +
   labs(
     title = "Manual Measurement: Mean Change in Sediment Pin Length",
-    subtitle = "Apr 2022 - Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    subtitle = "Jun 2022 - Sep 2023   (Positive value = accretion   Negative value = erosion)",
     y = "Mean Change (cm)",
     x = "Marsh Zone",
     fill= "End of Shoreline",
