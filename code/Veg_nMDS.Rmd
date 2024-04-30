@@ -390,7 +390,7 @@ VegDataMerged_mod_U <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegD
 ### The model:
 adonis2(VegDataMerged_mod_U$Total_Veg ~ Shoreline_End*Log_Presence, 
         data=VegDataMerged_mod_U,
-        method = "euc",
+        method = "bray",
         na.action=na.exclude)
 
 ```
@@ -585,7 +585,7 @@ VegDataMerged_mod_M <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegD
 ### The model:
 adonis2(VegDataMerged_mod_M$Total_Veg ~ Shoreline_End*Log_Presence, 
         data=VegDataMerged_mod_M,
-        method = "euc",
+        method = "bray",
         na.action=na.exclude)
 
 ```
@@ -785,7 +785,7 @@ VegDataMerged_mod_L <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegD
 ### The model:
 adonis2(VegDataMerged_mod_U$Total_Veg ~ Shoreline_End*Log_Presence, 
         data=VegDataMerged_mod_L,
-        method = "euc",
+        method = "bray",
         na.action=na.exclude)
 ```
 
