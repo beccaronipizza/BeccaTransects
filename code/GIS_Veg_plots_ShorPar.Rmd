@@ -1,0 +1,531 @@
+---
+title: "GIS_Veg_plots_ShorPar"
+author: "Becca Morris"
+date: "2024-04-27"
+output: html_document
+---
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(viridisLite)
+library(lubridate)
+library(naniar) #allows you to use the replace_with_na_at()
+library(gridExtra)
+library(ggtext)
+library(ggpubr)
+library(mdthemes)
+```
+
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+
+GISvegdata <- read.csv("~/GitHub/BeccaTransects/data/GIS_ThreeYear_VegChange.csv")
+GISvegdata_percent <- read.csv("~/GitHub/BeccaTransects/data/GIS_Veg_PercentChange.csv")
+```
+
+#set up the color-blind color palette
+```{r}
+cbp <- c("#D55E00","#009E73", "#56B4E9", "#0072B2", "#F0E442", "#CC79A7","#E69F00", "#000000")
+```
+
+
+
+
+# ###  Percent Change ### #
+
+
+
+
+#Veg Percent Change for Dec 2021 to Aug 2023, for each shore parallel zone:
+
+#Mixed veg
+```{r}
+GIS_PC_byZandS_mv <- GISvegdata_percent %>% 
+  filter(Zone !="All") %>% 
+  filter(year == "3", VegCom == "mixedveg") %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
+  select(VegCom, Zone, Shore_end, Percent_change, Initial_year, Final_year, year) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) 
+  
+```
+
+```{r}
+GIS_veg_PC_mixedveg <- ggplot(GIS_PC_byZandS_mv,
+                               mapping = aes(x = Zone,
+                                             y = Percent_change,
+                                             group = Zone,
+                                             fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shore_end) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-2,20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Sears Point Mixed Transitional Veg Cover Change (%) After 2 Years via GIS & Aerial Imagery",
+    subtitle = "December 2021 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+   #fill = "Log Presence",
+   #caption = "*Error bars reflect standard error",
+    tag = "Veg_plots_GIS.Rmd-GIS_veg_PC_mixedveg") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_label(aes(label = Percent_change, y = -3.2),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
+
+GIS_veg_PC_mixedveg
+```
+
+#Pickleweed
+```{r}
+GIS_PC_byZandS_pw <- GISvegdata_percent %>% 
+  filter(Zone !="All") %>% 
+  filter(year == "3", VegCom == "pickleweed") %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
+  select(VegCom, Zone, Shore_end, Percent_change, Initial_year, Final_year, year) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) 
+  
+```
+
+```{r}
+GIS_veg_PC_pickle <- ggplot(GIS_PC_byZandS_pw,
+                               mapping = aes(x = Zone,
+                                             y = Percent_change,
+                                             group = Zone,
+                                             fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shore_end) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-3, 50)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Sears Point Pickleweed Veg Cover Change (%) After 2 Years via GIS & Aerial Imagery",
+    subtitle = "December 2021 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+   #fill = "Log Presence",
+   #caption = "*Error bars reflect standard error",
+    tag = "Veg_plots_GIS.Rmd-GIS_veg_PC_pickle") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_label(aes(label = Percent_change, y = -5.5),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
+
+GIS_veg_PC_pickle
+```
+
+#Cordgrass
+```{r}
+GIS_PC_byZandS_sp <- GISvegdata_percent %>% 
+  filter(Zone !="All") %>% 
+  filter(year == "3", VegCom == "cordgrass") %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
+  select(VegCom, Zone, Shore_end, Percent_change, Initial_year, Final_year, year) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) 
+  
+```
+
+```{r}
+GIS_veg_PC_cordgrass <- ggplot(GIS_PC_byZandS_sp,
+                               mapping = aes(x = Zone,
+                                             y = Percent_change,
+                                             group = Zone,
+                                             fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shore_end) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-33, 56)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Sears Point Cordgrass Veg Cover Change (%) After 2 Years via GIS & Aerial Imagery",
+    subtitle = "December 2021 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+   #fill = "Log Presence",
+   #caption = "*Error bars reflect standard error",
+    tag = "Veg_plots_GIS.Rmd-GIS_veg_PC_cordgrass") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_label(aes(label = Percent_change, y = -12.5),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
+
+GIS_veg_PC_cordgrass
+```
+
+
+
+
+# ################################################################################################################################################################ #
+
+
+#Now to Plot Veg Percent Change for Dec 2021 to Aug 2022:
+
+#Mixed Veg '21-'22
+```{r}
+GIS_PC_byZandS_mv <- GISvegdata_percent %>% 
+  filter(Zone !="All") %>% 
+  filter(year == "1", VegCom == "mixedveg") %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
+  select(Zone, Shore_end, Percent_change, Initial_year, Final_year, year, VegCom) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) 
+  
+```
+
+```{r}
+GIS_veg_PC_mv_yr1<- ggplot(GIS_PC_byZandS_mv,
+                               mapping = aes(x = Zone,
+                                             y = Percent_change,
+                                             group = Zone,
+                                             fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shore_end) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-1, 28)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Sears Point Mixed Transitional Veg Cover Change (%) After 1 Year via GIS & Aerial Imagery",
+    subtitle = "December 2021 to August 2022",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+   #fill = "Log Presence",
+   #caption = "*Error bars reflect standard error",
+    tag = "Veg_plots_GIS.Rmd-GIS_veg_PC_mv_yr1") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_label(aes(label = Percent_change, y = -2.75),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
+
+GIS_veg_PC_mv_yr1
+```
+
+
+#Pickleweed '21-'22:
+```{r}
+GIS_PC_byZandS_pw <- GISvegdata_percent %>% 
+  filter(Zone !="All") %>% 
+  filter(year == "1", VegCom == "pickleweed") %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
+  select(Zone, Shore_end, Percent_change, Initial_year, Final_year, year, VegCom) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) 
+  
+```
+
+```{r}
+GIS_veg_PC_pw_yr1 <- ggplot(GIS_PC_byZandS_pw,
+                               mapping = aes(x = Zone,
+                                             y = Percent_change,
+                                             group = Zone,
+                                             fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shore_end) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-1, 45)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Sears Point Pickleweed Veg Cover Change (%) After 1 Year via GIS & Aerial Imagery",
+    subtitle = "December 2021 to August 2022",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+   #fill = "Log Presence",
+   #caption = "*Error bars reflect standard error",
+    tag = "Veg_plots_GIS.Rmd-GIS_veg_PC_pw_yr1") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_label(aes(label = Percent_change, y = -4),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
+
+GIS_veg_PC_pw_yr1
+```
+
+#Spatrtina '21-'22
+```{r}
+GIS_PC_byZandS_sp <- GISvegdata_percent %>% 
+  filter(Zone !="All") %>% 
+  filter(year == "1", VegCom == "cordgrass") %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
+  select(Zone, Shore_end, Percent_change, Initial_year, Final_year, year, VegCom) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) 
+  
+```
+
+```{r}
+GIS_veg_PC_sp_yr1 <- ggplot(GIS_PC_byZandS_sp,
+                               mapping = aes(x = Zone,
+                                             y = Percent_change,
+                                             group = Zone,
+                                             fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shore_end) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-1, 22)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Sears Point Pickleweed Veg Cover Change (%) After 1 Year via GIS & Aerial Imagery",
+    subtitle = "December 2021 to August 2022",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+   #fill = "Log Presence",
+   #caption = "*Error bars reflect standard error",
+    tag = "Veg_plots_GIS.Rmd-GIS_veg_PC_pw_yr1") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_label(aes(label = Percent_change, y = -2.25),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
+
+GIS_veg_PC_sp_yr1
+```
+
+
+
+
+#And Now Percent Change from Aug 2022 to Aug 2023
+#NOT DONE. DO I need?
+```{r}
+GIS_PercChange_byZandS_yr2 <- GISvegdata_percent %>% 
+  filter(Zone !="All") %>% 
+  filter(year == "2") %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
+  select(Zone, Shore_end, Percent_change, Initial_year, Final_year) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) 
+
+```
+
+```{r}
+GIS_veg_PercentChange_yr2<- ggplot(GIS_PercChange_byZandS_yr2,
+                               mapping = aes(x = Zone,
+                                             y = Percent_change,
+                                             group = Zone,
+                                             fill = Zone)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shore_end) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-15, 26)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Sears Point % Veg Cover Change After 1 Year via GIS & Aerial Imagery",
+    subtitle = "August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+   #fill = "Log Presence",
+   #caption = "*Error bars reflect standard error",
+    tag = "Veg_plots_GIS.Rmd-GIS_veg_PercentChange_yr2") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        #legend.title = element_text(face = "bold", size=14),
+        #legend.text=element_text(size=12),
+        legend.position = "none",
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_label(aes(label = Percent_change, y = -17.5),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
+
+GIS_veg_PercentChange_yr2
+  
+```
+
+
+
+
+
+
+
+
+
+#And Percent Change with both years on one plot:
+```{r}
+GIS_PC_byZandS_v3 <- GISvegdata_percent %>% 
+  filter(Zone !="All") %>% 
+  filter(year == "1" | year == "2") %>% 
+  filter(VegCom != "") %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower")),
+         year = factor(year, levels = c("1", "2")),
+         VegCom = factor(VegCom, levels = c("mixedveg", "pickleweed", "cordgrass"),
+                         labels = c(mixedveg ="Mixed", pickleweed = "Salicornia", cordgrass = "Spartina"))) %>%  #make it so that facet grid orders shoreline end from west to east
+  select(Zone, Shore_end, Percent_change, year, Initial_year, Final_year, VegCom) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  group_by(Shore_end, Zone, VegCom, year)
+
+```
+
+```{r}
+GIS_veg_PC_v3 <- ggplot(GIS_PC_byZandS_v3,
+                               mapping = aes(x = Zone,
+                                             y = Percent_change,
+                                             fill = year,
+                                             group = year)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(VegCom ~ Shore_end) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  #scale_y_manual(labels = c(mixedveg ="Mixed", pickleweed = "Pickleweed", cordgrass = "Cordgrass")) +
+  coord_cartesian(ylim = c(-19, 60)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Sears Point Veg Community Cover Change (%) --
+                                  Year 1 and Year 2 Comparison via GIS & Aerial Imagery",
+    subtitle = "Year 1 = Dec 2021 to Aug 2022      Year 2 = Aug 2022 to Aug 2023",
+    x = "Marsh Zone",
+    y ="Total Vegetation Cover (%)",
+   fill = "Year",
+   #caption = "*Error bars reflect standard error",
+    tag = "Veg_plots_GIS.Rmd-GIS_veg_PC__mv_v3") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  linewidth =0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 07),
+        plot.subtitle = element_text(size = 10),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  geom_label(aes(label = Percent_change, y = -27),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
+           
+
+
+GIS_veg_PC_v3
+  
+```

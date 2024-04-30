@@ -375,17 +375,23 @@ ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
           common.legend = TRUE,
           legend = "bottom")
 ```
+
 #Test for differences in the veg community composition across shoreline end and log v no log.
 ```{r}
 #First, need to remove these previous columns that were combined back in the beginning and remove the weirdo in quad 3 for C6-L174:
 VegDataMerged_mod_U <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "U" &
                                   !(VegDataMerged$Transect_ID == "C6-L174" & 
                                       VegDataMerged$Quadrat == 3)), ] %>% 
-  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 
-### Not sure if I can run this or not!!!
-adonis2(Total_Veg ~ Shoreline_End, data=VegDataMerged_mod_U)
-
+### The model:
+adonis2(VegDataMerged_mod_U$Total_Veg ~ Shoreline_End*Log_Presence, 
+        data=VegDataMerged_mod_U,
+        method = "euc",
+        na.action=na.exclude)
 
 ```
 
@@ -567,6 +573,25 @@ ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
 ```
 
 
+#Test for differences in the veg community composition across shoreline end and log v no log.
+```{r}
+#First, need to remove these previous columns that were combined back in the beginning and remove the weirdo in quad 3 for C6-L174:
+VegDataMerged_mod_M <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "M"),] %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+
+### The model:
+adonis2(VegDataMerged_mod_M$Total_Veg ~ Shoreline_End*Log_Presence, 
+        data=VegDataMerged_mod_M,
+        method = "euc",
+        na.action=na.exclude)
+
+```
+
+
+
 #Lower Zone:
 ```{r}
 ###  Plotting Hellinger method in base R ###
@@ -745,5 +770,22 @@ p3
 ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
           common.legend = TRUE,
           legend = "bottom")
+```
+
+
+#Test for differences in the veg community composition across shoreline end and log v no log.
+```{r}
+#First, need to remove these previous columns that were combined back in the beginning and remove the weirdo in quad 3 for C6-L174:
+VegDataMerged_mod_L <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "U"), ] %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+
+### The model:
+adonis2(VegDataMerged_mod_U$Total_Veg ~ Shoreline_End*Log_Presence, 
+        data=VegDataMerged_mod_L,
+        method = "euc",
+        na.action=na.exclude)
 ```
 
