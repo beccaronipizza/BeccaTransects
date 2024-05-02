@@ -29,7 +29,7 @@ library(ggpubr)
 setwd("~/GitHub/BeccaTransects/data")
 
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
-vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_new")
 ```
 
 # 1. creating the main data frame:
@@ -384,7 +384,6 @@ VegDataMerged_mod_U <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegD
                                       VegDataMerged$Quadrat == 3)), ] %>% 
   select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) %>% 
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west","east")),
-         Zone = factor(Zone, levels = c("Upper","Middle","Lower")),
          Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 
 ### The model:
@@ -779,7 +778,6 @@ ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
 VegDataMerged_mod_L <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "U"), ] %>% 
   select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) %>% 
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west","east")),
-         Zone = factor(Zone, levels = c("Upper","Middle","Lower")),
          Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 
 ### The model:

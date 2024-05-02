@@ -529,3 +529,60 @@ GIS_veg_PC_v3 <- ggplot(GIS_PC_byZandS_v3,
 GIS_veg_PC_v3
   
 ```
+
+#Make same plot as above but using lines:
+```{r}
+GIS_PC_byZandS_v4 <- GISvegdata_percent %>% 
+  mutate(Date = paste0(Initial_year, "-", Month)) %>%
+  filter(Zone !="All") %>% 
+  filter(year == "1" | year == "0" | year == "2") %>% 
+  filter(VegCom != "") %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower")),
+         VegCom = factor(VegCom, levels = c("mixedveg", "pickleweed", "cordgrass"),
+                         labels = c(mixedveg ="Mixed", pickleweed = "Salicornia", cordgrass = "Spartina"))) %>%  #make it so that facet grid orders shoreline end from west to east
+  select(Zone, Shore_end, Percent_change, year, Initial_year, Final_year, VegCom, Date, InitialPercent_vegarea) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  group_by(Shore_end, Zone, VegCom, year)
+```
+
+```{r}
+GISvegplot_percent_line <- ggplot(GIS_PC_byZandS_v4, 
+                     mapping = aes(x = Date,
+                                   y = InitialPercent_vegarea,
+                                   group = Shore_end,
+                                   color = Shore_end)) +
+  geom_point(position = position_dodge(0.5), size = 2) +
+  guides(color = guide_legend(title = "Shoreline End")) +
+  geom_line(position = position_dodge(0.5)) +
+  facet_grid(VegCom ~ Zone) +
+  scale_color_manual(values = cbp) +
+  labs( 
+    title = "Sears Point Vegetation Cover Over 3 Years By Zone via GIS & Aerial Imagery",
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    x = "Date of Survey",
+    y ="Veg Cover %",
+    #caption = "*Error bars reflect standard error",
+    fill = "Shoreline End",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_percent_line") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 10),
+        plot.subtitle = element_text(size = 10),
+        strip.text = element_text(size = 13, color = "black")) 
+  
+
+GISvegplot_percent_line
+```
+

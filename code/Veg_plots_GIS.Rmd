@@ -22,6 +22,7 @@ setwd("~/GitHub/BeccaTransects/data")
 
 GISvegdata <- read.csv("~/GitHub/BeccaTransects/data/GIS_ThreeYear_VegChange.csv")
 GISvegdata_percent <- read.csv("~/GitHub/BeccaTransects/data/GIS_Veg_PercentChange.csv")
+GISvegdata_percent_v2 <- read.csv("~/GitHub/BeccaTransects/data/GIS_VegPercentChange_v2.csv")
 ```
 
 #set up the color-blind color palette
@@ -81,12 +82,6 @@ GISvegplot <- ggplot(GISveg_byshoreline,
 
 GISvegplot
 ```
-
-
-
-
-
-
 
 
 #Creating a data frame with all three zones combined and broken up by shoreline end:
@@ -228,6 +223,49 @@ GISvegplot_byZYandS<- ggplot(GISveg_byZYandS,
 GISvegplot_byZYandS
 ```
 
+#Ok, Margot wants me to make the above plot but as a line/point plot, rather than a bar plot. Using the df from above..."
+```{r}
+GISvegplot_byZYandS_line <- ggplot(GISveg_byZYandS, 
+                     mapping = aes(x = Date,
+                                   y = Hectares,
+                                   group = Shoreline_end,
+                                   color = Shoreline_end)) +
+  geom_point(position = position_dodge(0.5), size = 3) +
+  guides(color = guide_legend(title = "Shoreline End")) +
+  geom_line(position = position_dodge(0.5)) +
+  facet_grid(~ Zone) +
+  scale_color_manual(values = cbp) +
+  labs( 
+    title = "Sears Point Vegetation Cover Change Over 3 Years By Zone via GIS & Aerial Imagery",
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    x = "Date of Survey",
+    y ="Hectares",
+    #caption = "*Error bars reflect standard error",
+    fill = "Shoreline End",
+    tag = "Veg_plots_GIS.Rmd-GISvegplot_byZYandS_line") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 10),
+        plot.subtitle = element_text(size = 10),
+        strip.text = element_text(size = 13, color = "black")) 
+  
+
+GISvegplot_byZYandS_line
+```
+
+
+
 
 
 
@@ -302,7 +340,62 @@ GISvegplot_TotalVeg_change
 
 
 
-# ###  Percent Change ### #
+
+
+# ###  Percent Cover ### #
+
+# Plot percent cover for all three dates, zones, and both shoreline ends:
+```{r}
+GIS_PercentCover <- GISvegdata_percent_v2 %>% 
+  filter(Zone != "All") %>% 
+  mutate(Date = paste0(Initial_year, "-", Month)) %>% 
+  select(-Total_area, -year, -Month, -Initial_year, -InitialVeg_area) %>% 
+  mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
+         Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) #make it so that facet grid orders shoreline end from west to east
+```
+
+```{r}
+GIS_PercentCover_line <- ggplot(GIS_PercentCover, 
+                     mapping = aes(x = Date,
+                                   y = InitialPercent_vegarea,
+                                   group = Shore_end,
+                                   color = Shore_end)) +
+  geom_point(position = position_dodge(0.5), size = 3) +
+  guides(color = guide_legend(title = "Shoreline End")) +
+  geom_line(position = position_dodge(0.5)) +
+  facet_grid(~ Zone) +
+  scale_color_manual(values = cbp) +
+  labs( 
+    title = "Sears Point Vegetation Cover Over 3 Years By Zone via GIS & Aerial Imagery",
+    subtitle = "Based on UAV imagery taken in Dec 2021, Aug 2022, and Aug 2023",
+    x = "Date of Survey",
+    y ="Veg Cover %",
+    #caption = "*Error bars reflect standard error",
+    fill = "Shoreline End",
+    tag = "Veg_plots_GIS.Rmd-GIS_PercentCover_line") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 10),
+        plot.subtitle = element_text(size = 10),
+        strip.text = element_text(size = 13, color = "black")) 
+  
+
+GIS_PercentCover_line
+```
+
+
+
 
 #Now to Plot Veg Percent Change for Dec 2021 to Aug 2023:
 ```{r}

@@ -29,7 +29,7 @@ library(ggpubr)
 setwd("~/GitHub/BeccaTransects")
 
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
-vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_new")
 ```
 
 # 1. creating the main data frame  **Need to replace SaDe_new and SaPa_new with just SaDe and SaPa column names and then rerun plots before publishing!!:
@@ -65,7 +65,7 @@ VegDataMerged <- full_join(VegDataNew, vegmetadata, by = "Transect_ID") %>%
 
 # #################################################################################################################### #
 
-#this is for August of 2022! 
+
 
 #2. Now I need to seperate my data into two df's for EACH ZONE -- one for identifiers and one for abundance data only.
 # *We removed the row where C6-L174 is equal to quadrat 3 and zone U since it was a big outlier.
@@ -79,7 +79,7 @@ VegDataID_U <- VegDataMerged[VegDataMerged$Date == "2022-June" & VegDataMerged$Z
 VegDataSpecies_U <- VegDataMerged[(VegDataMerged$Date == "2022-June" & VegDataMerged$Zone == "U" &
                                   !(VegDataMerged$Transect_ID == "C6-L174" & 
                                       VegDataMerged$Quadrat == 3)), 
-                                c(7:37, 50:52)] %>% 
+                                c(7:37, 50:51)] %>% 
   select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) #'CaMa', 'Lolium', 'RaSa', 'FrSa', 'Fabiaceae', 'Ranunculus', 'Taraxacum'))
 
 
@@ -385,13 +385,15 @@ ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
 #Test for differences in the veg community composition across shoreline end and log v no log.
 ```{r}
 #First, need to remove these previous columns that were combined back in the beginning and remove the weirdo in quad 3 for C6-L174:
-VegDataMerged_mod_U <- VegDataMerged[(VegDataMerged$Date == "2023-August" & VegDataMerged$Zone == "U" &
+VegDataMerged_mod_U <- VegDataMerged[(VegDataMerged$Date == "2022-June" & VegDataMerged$Zone == "U" &
                                   !(VegDataMerged$Transect_ID == "C6-L174" & 
                                       VegDataMerged$Quadrat == 3)), ] %>% 
   select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
 
 ### Not sure if I can run this or not!!!
-adonis2(Total_Veg ~ Shoreline_End, data=VegDataMerged_mod_U)
+adonis2(VegDataMerged_mod_U$Total_Veg ~ Shoreline_End*Log_Presence, 
+        data=VegDataMerged_mod_U,
+        method = "bray")
 
 
 ```
@@ -576,6 +578,19 @@ ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
           legend = "bottom")
 ```
 
+#Test for differences in the veg community composition across shoreline end and log v no log.
+```{r}
+#First, need to remove these previous columns that were combined back in the beginning and remove the weirdo in quad 3 for C6-L174:
+VegDataMerged_mod_M <- VegDataMerged[(VegDataMerged$Date == "2022-June" & VegDataMerged$Zone == "M"), ] %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups'))
+
+### Not sure if I can run this or not!!!
+adonis2(VegDataMerged_mod_M$Total_Veg ~ Shoreline_End*Log_Presence, 
+        data=VegDataMerged_mod_M,
+        method = "bray",
+        na.action=na.exclude)
+
+```
 
 #Lower Zone:
 ```{r}
@@ -755,4 +770,21 @@ p3
 ggarrange(p2, p3, ncol=1,     #left out p1 bc it is redundant with p3
           common.legend = TRUE,
           legend = "bottom")
+```
+
+#Test for differences in the veg community composition across shoreline end and log v no log.
+```{r}
+#First, need to remove these previous columns that were combined back in the beginning and remove the weirdo in quad 3 for C6-L174:
+VegDataMerged_mod_L <- VegDataMerged[(VegDataMerged$Date == "2022-June" & VegDataMerged$Zone == "L"), ] %>% 
+  select(-c('GrGR','LeTr','MixedSeedlings','SaPa','SaDe','PicklePups')) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west","east")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+
+### Not sure if I can run this or not!!!
+adonis2(VegDataMerged_mod_L$Total_Veg ~ Shoreline_End*Log_Presence, 
+        data=VegDataMerged_mod_L,
+        method = "bray",
+        na.action=na.exclude)
+
+sum(is.na(VegDataMerged_mod_L))
 ```
