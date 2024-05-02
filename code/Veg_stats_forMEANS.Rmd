@@ -20,7 +20,7 @@ library(DHARMa)
 setwd("~/GitHub/BeccaTransects/data")
 
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
-vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_new")
 ```
 
 #Main DF:
@@ -139,7 +139,7 @@ kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
 
 
 
-
+#ALL YOU NEED RIGHT HERE!! GLMM with Julie!
 #GLMM with Julie:
 ```{r}
 hist(TotalVeg_change$Total_Veg)
@@ -155,8 +155,8 @@ Interactive_glmm3 <-  lmer(sqrt(Total_Veg + 1) ~ Shoreline_End*Log_Presence*Zone
                       data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
 
 Anova(Interactive_glmm)
-emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone)
-check_normality(Interactive_glmm3) #library(performance)
+emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) #run this if there is an inteactive effect
+check_normality(Interactive_glmm3) #library(performance) not for glmer.nb models. Use for lmer.
 
 sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
 plot( sim_res ) # draws diagnostic plots along with diagnostic tests

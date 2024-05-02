@@ -21,7 +21,7 @@ library(mdthemes)
 setwd("~/GitHub/BeccaTransects/data")
 
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
-vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2") #for log zone removal use sheet = "Data2_LZ" <- make sure htat right name
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_new") #for log zone removal use sheet = "Data2_LZ" <- make sure htat right name
 ```
 
 
@@ -91,7 +91,7 @@ cbp <- c("#F0E442", "#CC79A7", "#0072B2","#D55E00", "#009E73", "#56B4E9","#E69F0
 
 #EvW and LvNL:
 ```{r}
-TotalVeg_change_boxEWLNL <- ggplot(TotalVeg_change,
+TotalVeg_change_box <- ggplot(TotalVeg_change,
                                   mapping = aes(x = Zone,
                                   y = count_difference,
                                   #group = Log_Presence,
@@ -103,25 +103,25 @@ TotalVeg_change_boxEWLNL <- ggplot(TotalVeg_change,
   facet_grid(~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
   labs( 
-    title = "Mean % Change in Total Vegetation Cover",
+    title = "Change in Total Vegetation Cover (%)",
     subtitle = "August 2022 to August 2023",
     x = "Marsh Zone",
     y ="Percent Cover Change (%)",
    fill = "Log Presence",
     #caption = "*Whiskers reflect 1.5*IQR",
-    tag = "Veg_plots.Rmd-TotalVeg_change_boxEWLNL") +
+    tag = "Veg_plots.Rmd-TotalVeg_change_box") +
   theme_bw(base_size = 10) +
-  theme(axis.title = element_text(face = "bold", size=14),
-        legend.title = element_text(face = "bold", size=14),
-        legend.text=element_text(size=12),
-        legend.position = "top",
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
         legend.background = element_rect(fill="lightgrey",
                                   size=0.5, linetype="solid", 
                                   colour ="darkgrey"),
         axis.text.x = element_text(size = 11),
         axis.text.y = element_text(size = 10),
-        plot.title = element_text(face = "bold", size = 13),
-        plot.caption = element_text(size = 11),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
         plot.subtitle = element_text(size = 11),
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
@@ -129,11 +129,11 @@ TotalVeg_change_boxEWLNL <- ggplot(TotalVeg_change,
   
   
 
-TotalVeg_change_boxEWLNL
+TotalVeg_change_box
 ```
 
 
-#EvW:
+#EvW without Log variable:
 ```{r}
 TotalVeg_change_boxEvW <- ggplot(TotalVeg_change,
                                   mapping = aes(x = Shoreline_End,
@@ -174,4 +174,132 @@ TotalVeg_change_boxEvW <- ggplot(TotalVeg_change,
   
 
 TotalVeg_change_boxEvW
+```
+
+#Now for Salicornia:
+```{r}
+SaPa_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SaPa),
+         final_count = last(SaPa),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+  #          sd_cover = sd(count_difference, na.rm = TRUE),
+  #          n_cover = n()) %>% 
+  #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+```{r}
+SaPa_change_box <- ggplot(SaPa_change,
+                                  mapping = aes(x = Zone,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Log_Presence,
+                                  color = log_Presence)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+     title = expression(paste(bold("Change in " *italic("Salicornia pacifica")* " Cover (%)"))),
+    subtitle = "August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Percent Cover Change (%)",
+   fill = "Log Presence",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_plots.Rmd-SaPa_change_box") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+SaPa_change_box
+```
+
+#Now for Spartina:
+```{r}
+SpFo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SpFo),
+         final_count = last(SpFo),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+  #          sd_cover = sd(count_difference, na.rm = TRUE),
+  #          n_cover = n()) %>% 
+  #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+```{r}
+SpFo_change_box <- ggplot(SpFo_change,
+                                  mapping = aes(x = Zone,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Log_Presence,
+                                  color = log_Presence)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+     title = expression(paste(bold("Change in " *italic("Spartina foliosa")* " Cover (%)"))),
+    subtitle = "August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Percent Cover Change (%)",
+   fill = "Log Presence",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_plots.Rmd-SpFo_change_box") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+SpFo_change_box
 ```

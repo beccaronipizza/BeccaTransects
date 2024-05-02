@@ -1,0 +1,167 @@
+---
+title: "RTKpin_boxplots"
+author: "Becca Morris"
+date: "2024-05-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+```
+#1. Run these:
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+
+RTKpindata_norefs <- read_xlsx("RTKSedimentPinData.xlsx", sheet = "RTKData_thesispins_norefs_pivot")
+
+```
+
+#prepping the data frame:
+##*remember that this df is still in ft NADV88 and isn't converted until the next step
+```{r}
+RTKpins <- RTKpindata_norefs %>% 
+  select(-c("midg","midt","upt","upg", "lowt", "lowg", "Date")) %>% #can remove these columns bc the top-ground calculations are already calculated in excel in their own columns
+  mutate_at(c('upper', 'middle'), as.numeric) %>% #removed the POSITX (lubridate) version of date
+  mutate(Date = paste0(Year, "-", Month)) %>% #created my own date to match the sediment pin code
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  group_by(Name, Shoreline_End) %>% 
+  rename(Transect_ID = Name)
+```
+
+# Setting up df for EvW Plots:
+```{r}
+RTKpinschangeEvW <- RTKpins %>%
+  mutate(UpperDiff = ((last(upper) - first(upper))*-1)*30.48) %>%  # *30.48 converts NADV88 ft to cm
+  mutate(MiddleDiff = ((last(middle) - first(middle))*-1)*30.48) %>% 
+  mutate(LowerDiff = ((last(lower) - first(lower))*-1)*30.48) %>%
+  select(-c("Date", "Year", "Month", "upper", "middle", "lower")) %>% 
+  distinct() %>%  #this removes repeated values for each month's calculation
+  pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>% 
+  rename(Zone = Pin_Location) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("UpperDiff", "MiddleDiff", "LowerDiff"))) %>%
+  group_by(Shoreline_End, Zone) #%>% 
+  #summarize(mean_difference = mean(Sediment_Change, na.rm = TRUE),
+  #          sd_difference = sd(Sediment_Change, na.rm = TRUE),
+  #          n_difference = n()) %>% 
+  #mutate(se_difference = sd_difference/sqrt(n_difference)) %>% 
+  #mutate(across(where(is.numeric), ~round(., 1)))
+```
+
+
+
+# EvW *ONLY* Plot:
+```{r}
+cbprtk <- c("#009E73", "#56B4E9", "#F0E442" , "#E69F00", "#000000", "#0072B2","#D55E00", "#CC79A7","#999999")
+```
+
+```{r}
+RTKpinchangeEvW_box <- ggplot(RTKpinschangeEvW,
+                                  mapping = aes(x = Zone,
+                                  y = Sediment_Change,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbprtk) +
+  coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
+  labs(
+    title = "Manual Measurement: Mean Change in Sediment Pin Length ",
+    subtitle = "Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Mean Change (cm)",
+    x = "Marsh Zone",
+    fill= "End of Shoreline",
+    tag = "Manualpin_boxplots.Rmd_RTKpinchangeEvW_box",
+    caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+RTKpinchangeEvW_box
+```
+
+
+
+## Setting up df for EvW *AND* Log v No Log:
+```{r}
+RTKpinchangeLvNL <- SedPinDataMerged[SedPinDataMerged$Log_Presence != "reference",] %>% 
+  select(Transect_ID, Shoreline_End, Upper, Middle, Lower, Date, Log_Presence) %>% 
+  mutate(UpperDiff = (last(Upper) - first(Upper))*-1) %>% 
+  mutate(MiddleDiff = (last(Middle) - first(Middle))*-1) %>% 
+  mutate(LowerDiff = (last(Lower) - first(Lower))*-1) %>% 
+  select(-c('Date', 'Upper', 'Middle', 'Lower')) %>% #remove all unnecessary columns
+  distinct() %>%  #this removes repeated values for each month's calculation
+  pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>%
+  rename(Zone = Pin_Location) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("UpperDiff", "MiddleDiff", "LowerDiff"))) %>% #this puts west first in the legend
+  group_by(Log_Presence, Shoreline_End, Zone) #%>% 
+  #summarize(mean_difference = mean(Sediment_Change, na.rm = TRUE),
+  #          sd_difference = sd(Sediment_Change, na.rm = TRUE),
+  #          n_difference = n()) %>% 
+  #mutate(se_difference = sd_difference/sqrt(n_difference)) %>% 
+  #mutate(across(where(is.numeric), ~round(., 1)))
+```
+
+```{r}
+RTKpinchangeLvNL_box <- ggplot(RTKpinchangeLvNL,
+                                  mapping = aes(x = Zone,
+                                  y = Sediment_Change,
+                                  #group = Log_Presence,
+                                  fill = Log_Presence,
+                                  color = log_Presence)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbprtk) +
+  facet_grid(~ Shoreline_End) +
+  coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
+  labs(
+    title = "Manual Measurement: Mean Change in Sediment Pin Length ",
+    subtitle = "Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Mean Change (cm)",
+    x = "Marsh Zone",
+    fill= "Log Presence",
+    tag = "Manualpin_boxplots.Rmd_RTKpinchangeLvNL_box",
+    caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+RTKpinchangeLvNL_box
+#Will say: Warning: Removed 3 rows containing non-finite outside the scale range (`stat_boxplot()`). This is due to having NA's for a few of the pins.  
+```

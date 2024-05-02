@@ -13,6 +13,9 @@ library(ggrepel)
 library(ggpubr)
 library(emmeans)
 library(magrittr)
+library(lme4)
+library(car)
+library(DHARMa)
 library(performance)
 
 setwd("~/GitHub/BeccaTransects/data")
@@ -57,6 +60,12 @@ sedpinchange <- SedPinDataMerged %>%
   pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>% 
   mutate(Pin_Location = as.factor(Pin_Location)) #make Pin_Location a factor
 ```
+
+
+# #SKIP TO BOTTOM FOR GLMM# #
+
+
+
 
 # 3. Running a basic GLM: without taking into account interactions (use #4 below):
 ```{r}
@@ -211,6 +220,7 @@ sedpin_glmm1 <-  lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+
 
 summary(sedpin_glmm1)
 Anova(sedpin_glmm1)
+#use emmeans if you get significant anything other than a main effect
 emmeans(Interactive_glmm, pairwise ~ Shoreline_End|Zone)
 
 
@@ -222,5 +232,7 @@ testDispersion ( sim_res )
 #The output of the VIF analysis provides the Generalized Variance Inflation Factor (GVIF) for each predictor variable in your model. The GVIF measures the degree of multicollinearity for each predictor variable, taking into account all other predictor variables in the model.
 vif_values <- vif(sedpin_glmm1)
 print(vif_values)
+
+#Generally, for GVIF, values above 10 or 5 are often considered indicative of high multicollinearity, meaning that the variance of the coefficient estimate for that predictor variable is inflated by a factor of 10 or 5, respectively, due to multicollinearity with the other predictor variables.
 ```
 
