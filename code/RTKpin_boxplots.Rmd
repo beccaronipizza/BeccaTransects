@@ -103,12 +103,12 @@ RTKpinchangeEvW_box
 
 ## Setting up df for EvW *AND* Log v No Log:
 ```{r}
-RTKpinchangeLvNL <- SedPinDataMerged[SedPinDataMerged$Log_Presence != "reference",] %>% 
-  select(Transect_ID, Shoreline_End, Upper, Middle, Lower, Date, Log_Presence) %>% 
-  mutate(UpperDiff = (last(Upper) - first(Upper))*-1) %>% 
-  mutate(MiddleDiff = (last(Middle) - first(Middle))*-1) %>% 
-  mutate(LowerDiff = (last(Lower) - first(Lower))*-1) %>% 
-  select(-c('Date', 'Upper', 'Middle', 'Lower')) %>% #remove all unnecessary columns
+RTKpinchangeLvNL <- RTKpins %>% 
+  select(Transect_ID, Shoreline_End, upper, middle, lower, Date, Log_Presence) %>% 
+  mutate(UpperDiff = ((last(upper) - first(upper))*-1)*30.48) %>%  # *30.48 converts NADV88 ft to cm
+  mutate(MiddleDiff = ((last(middle) - first(middle))*-1)*30.48) %>% 
+  mutate(LowerDiff = ((last(lower) - first(lower))*-1)*30.48) %>%
+  select(-c('Date', 'upper', 'middle', 'lower')) %>% #remove all unnecessary columns
   distinct() %>%  #this removes repeated values for each month's calculation
   pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>%
   rename(Zone = Pin_Location) %>% 
@@ -141,7 +141,7 @@ RTKpinchangeLvNL_box <- ggplot(RTKpinchangeLvNL,
     y = "Mean Change (cm)",
     x = "Marsh Zone",
     fill= "Log Presence",
-    tag = "Manualpin_boxplots.Rmd_RTKpinchangeLvNL_box",
+    tag = "RTKpin_boxplots.Rmd_RTKpinchangeLvNL_box",
     caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=13),
