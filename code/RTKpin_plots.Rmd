@@ -73,7 +73,7 @@ RTKpinEvWplot <- ggplot(RTKpinschangeEvW, aes(x= Pin_Location, y= mean_differenc
   scale_fill_manual(values = cbprtk) +
   labs(
     title = "RTK Measurement: Mean Change in Sediment Pin Length",
-    subtitle = "Jun 2022 to Sept 2023   (Positive value = accretion   Negative value = erosion)",
+    subtitle = "From Jun 2022 to Sept 2023   (Positive value = accretion   Negative value = erosion)",
     y = "Mean Change (cm)",
     x = "    Pin Location Relative to Transect Marsh Zone",
     fill= "End of Shoreline",
@@ -129,7 +129,6 @@ RTKpinschangeLvNL <- RTKpins %>%
             n_difference = n()) %>% 
   mutate(se_difference = sd_difference/sqrt(n_difference)) %>% 
   mutate(across(where(is.numeric), ~round(., 1)))
-  ```
 
 ```
 
@@ -154,7 +153,7 @@ RTKpinLvNLplot <- ggplot(RTKpinschangeLvNL,
   scale_fill_manual(values = cbprtk) +
   labs(
     title = "RTK Measurement: Mean Change in Sediment Pin Length ",
-    subtitle = "Jun 2022 to Sept 2023   (Positive value = accretion   Negative value = erosion)",
+    subtitle = "From Jun 2022 to Sept 2023   (Positive value = accretion   Negative value = erosion)",
     y = "Mean Change (cm)",
     x = "   Pin Location Relative to Transect Marsh Zone",
     fill= "Log Presence",

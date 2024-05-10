@@ -351,9 +351,9 @@ TotalVeg_change_barplot <- ggplot(TotalVeg_change,
   coord_cartesian(ylim = c(-4, 30)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Mean % Change in Total Vegetation Cover",
-    subtitle = "August 2022 to August 2023",
+    subtitle = "From August 2022 to August 2023",
     x = "Marsh Zone",
-    y ="Total Vegetation Cover (%)",
+    y ="Percent Cover Change (%)",
     fill = "Log Presence",
     caption = "*Error bars reflect standard error",
     tag = "Veg_plots.Rmd-TotalVeg_change_barplot") +
@@ -505,9 +505,9 @@ SaPa_change_barplot <- ggplot(SaPa_change,
   coord_cartesian(ylim = c(-23, 30)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = expression(paste(bold("Mean % Change in " *italic("Salicornia pacifica")* " Cover"))),
-    subtitle = "August 2022 to August 2023",
+    subtitle = "From August 2022 to August 2023",
     x = "Marsh Zone",
-    y ="Total Vegetation Cover (%)",
+    y ="Percent Cover Change (%)",
     fill = "Log Presence",
     caption = "*Error bars reflect standard error",
     tag = "Veg_plots.Rmd-SaPa_change_barplot") +
@@ -589,9 +589,10 @@ SpFo_change_barplot <- ggplot(SpFo_change,
   coord_cartesian(ylim = c(-5, 40)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = expression(paste(bold("Mean % Change in " *italic("Spartina foliosa")* " Cover"))),
-    subtitle = "August 2022 to August 2023",
+    subtitle = "From August 2022 to August 2023",
     x = "Marsh Zone",
-    y ="Total Vegetation Cover (%)",
+    y ="Percent Cover Change
+    (%)",
     fill = "Log Presence",
     caption = "*Error bars reflect standard error",
     tag = "Veg_plots.Rmd-SpFo_change_barplot") +

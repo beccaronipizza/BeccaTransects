@@ -8,7 +8,7 @@ library(viridisLite)
 setwd("~/GitHub/BeccaTransects/data")
 
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
-vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_new")
 
 
 # 1. creating the main data frame:
@@ -41,7 +41,8 @@ VegDataSumm <- VegDataNew %>%
             n_cover = n()) %>% 
   mutate(se_cover = sd_cover/sqrt(n_cover)) %>%
   mutate(Date = factor(Date,levels = c("2022-June", "2022-July", "2022-August", "2022-September", "2022-October", "2023-February","2023-April", "2023-June", "2023-August", "2023-October")),
-         Zone = factor(Zone, levels = c("U", "M", "L"))) 
+         Zone = factor(Zone, levels = c("U", "M", "L"))) %>%  
+  filter(Date != "2023-October")
 
 
 
@@ -50,7 +51,7 @@ VegDataSumm <- VegDataNew %>%
 
 
 
-cbp <- c("#D55E00", "#009E73", "#56B4E9", "#F0E442" , "#E69F00", "#000000", "#0072B2", "#CC79A7")
+cbp <- c("#D55E00", "#009E73", "#0072B2", "#56B4E9", "#F0E442" , "#E69F00", "#000000", "#CC79A7")
 
 
 #Percent Vegetation Cover Over Time By Marsh Zone
@@ -60,39 +61,55 @@ AllVegTransectsplot <- ggplot(data = VegDataSumm[VegDataSumm$Species_code == "To
                 mapping = aes(x = Date,
                               y = mean_cover,
                               group = Zone,
-                              color = Zone,
-                              shape = Zone)) +
+                              color = Zone)) +
+                              #shape = Zone)) +
   geom_line(size = 0.8, position = position_dodge(0.3)) +
   geom_errorbar(aes(ymin = mean_cover - se_cover,
                     ymax = mean_cover + se_cover),
-                size = 0.8, width = 0.1, color = "black", position = position_dodge(0.3)) +
-  geom_point(size = 3, position = position_dodge(0.3)) + 
+                size = 0.8, height = 0.2, width = 0.4, color = "black", position = position_dodge(0.3)) +
+  geom_point(aes(shape = Zone, size = Zone), position = position_dodge(0.3)) + 
   #geom_vline(xintercept= "2022-October",linetype =2, color = "red") +
   labs( 
     title = "Percent Vegetation Cover Over Time By Marsh Zone",
     subtitle = "Represents all transects over the course of two growing seasons (June 2022 to October 2023)",
     x = "Date of Survey",
     y ="Total Vegetated Cover (%)",
-    caption = "*Error bars reflect standard error") +
-  scale_color_manual(
-    name = "Marsh Zone",
-    values = c("#D55E00","#009E73", "#0072B2"), 
-    breaks = c("U","M","L"),
-    labels = c("Upper", "Middle", "Lower")) +
+    caption = "*Error bars reflect standard error",
+    #fill = "Shoreline End",
+    tag = "veg_xs_percentcover_EvW_LvNL.R-AllVegTransectsplot") +
+  scale_size_manual(values = c(5,5,5),
+                    labels = c("Upper", "Middle", "Lower"),
+                    name = "Marsh Zone") +
+  scale_color_manual(values = cbp, 
+                     labels = c("Upper", "Middle", "Lower"),
+                     name = "Marsh Zone") +
+  scale_shape_manual(values = c(15, 16, 17),
+                     labels = c("Upper", "Middle", "Lower"),
+                     name = "Marsh Zone") +
   theme_bw(base_size = 10) +
-  guides(shape = FALSE) + #turns off legend for shape
-  theme(axis.title = element_text(face = "bold",color = "black", size = 18),
-        legend.title = element_text(face = "bold", size= 18),
-        legend.text=element_text(size=15),
-        axis.text.x = element_text(size = 12, angle = 90, hjust = 1, vjust = 0.5),
-        axis.text.y = element_text(size = 13),
-        plot.title = element_text(face = "bold", size = 20),
-        plot.subtitle = element_text(size = 13),
-        plot.caption = element_text(size = 13))
+  scale_x_discrete(guide = guide_axis(angle = 90)) +
+  guides(color = guide_legend(title = "Marsh Zone")) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                         size=0.5, linetype="solid", 
+                                         colour ="darkgrey"),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 10),
+        plot.subtitle = element_text(size = 10),
+        strip.text = element_text(size = 13, color = "black"))
 
 
 AllVegTransectsplot  
 
+
+##### DONT NEED THE NO OCTOBER DATA BELOW. FILTERED OUT OCTOBER ABOVE!!!
 
 
 ###All BUT October 2023 Veg Transects Over Time (Ok, so Kathy suggested I leave off the data from October 2023 just to avoid showing the big drop in veg in the upper zone due to dead veg = bare ground)

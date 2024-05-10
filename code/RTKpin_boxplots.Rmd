@@ -70,12 +70,12 @@ RTKpinchangeEvW_box <- ggplot(RTKpinschangeEvW,
   coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
   labs(
-    title = "Manual Measurement: Mean Change in Sediment Pin Length ",
-    subtitle = "Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
-    y = "Mean Change (cm)",
+    title = "RTK Measurement: Change in Sediment Pin Length",
+    subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Sediment Pin Length (cm)",
     x = "Marsh Zone",
     fill= "End of Shoreline",
-    tag = "Manualpin_boxplots.Rmd_RTKpinchangeEvW_box",
+    tag = "RTKpin_boxplots.Rmd_RTKpinchangeEvW_box",
     caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=13),
@@ -136,9 +136,9 @@ RTKpinchangeLvNL_box <- ggplot(RTKpinchangeLvNL,
   coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
   labs(
-    title = "Manual Measurement: Mean Change in Sediment Pin Length ",
-    subtitle = "Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
-    y = "Mean Change (cm)",
+    title = "RTK Measurement: Change in Sediment Pin Length ",
+    subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Sediment Pin Length (cm)",
     x = "Marsh Zone",
     fill= "Log Presence",
     tag = "RTKpin_boxplots.Rmd_RTKpinchangeLvNL_box",
