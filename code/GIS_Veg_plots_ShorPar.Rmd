@@ -564,7 +564,7 @@ GISvegplot_percent_line <- ggplot(GIS_PC_byZandS_v4,
     y ="Veg Cover %",
     #caption = "*Error bars reflect standard error",
     fill = "Shoreline End",
-    tag = "Veg_plots_GIS.Rmd-GISvegplot_percent_line") +
+    tag = "GIS_Veg_plots_ShorPar.Rmd-GISvegplot_percent_line") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=12),
         legend.title = element_text(face = "bold", size=09),

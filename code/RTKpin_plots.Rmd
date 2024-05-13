@@ -75,7 +75,7 @@ RTKpinEvWplot <- ggplot(RTKpinschangeEvW, aes(x= Pin_Location, y= mean_differenc
     title = "RTK Measurement: Mean Change in Sediment Pin Length",
     subtitle = "From Jun 2022 to Sept 2023   (Positive value = accretion   Negative value = erosion)",
     y = "Mean Change (cm)",
-    x = "    Pin Location Relative to Transect Marsh Zone",
+    x = "Marsh Zone",
     fill= "End of Shoreline",
     tag = "RTKpin_plots.Rmd_RTKpinEvWplot",
     caption = "*Error bars reflect standard error") +
@@ -155,7 +155,7 @@ RTKpinLvNLplot <- ggplot(RTKpinschangeLvNL,
     title = "RTK Measurement: Mean Change in Sediment Pin Length ",
     subtitle = "From Jun 2022 to Sept 2023   (Positive value = accretion   Negative value = erosion)",
     y = "Mean Change (cm)",
-    x = "   Pin Location Relative to Transect Marsh Zone",
+    x = "Marsh Zone",
     fill= "Log Presence",
     caption = "*Error bars reflect standard error     *n=10 west/log, n=7 west/no log, n=11 east/log, n=9 east/no log",
     tag = "RTKpin_plots.Rmd-RTKpinLvNLplot") +

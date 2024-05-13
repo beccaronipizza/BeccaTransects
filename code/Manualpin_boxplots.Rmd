@@ -81,9 +81,9 @@ sedpinchangeLvNL_box <- ggplot(sedpinchangeLvNL,
   coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
   labs(
-    title = "Manual Measurement: Mean Change in Sediment Pin Length ",
-    subtitle = "Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
-    y = "Mean Change (cm)",
+    title = "Manual Measurement: Change in Sediment Pin Length ",
+    subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Sediment Pin Length (cm)",
     x = "Marsh Zone",
     fill= "Log Presence",
     tag = "Manualpin_boxplots.Rmd_sedpinchangeLvNL_box",
@@ -146,9 +146,9 @@ sedpinchangeEvW_box <- ggplot(sedpinchange,
   coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
   labs(
-    title = "Manual Measurement: Mean Change in Sediment Pin Length ",
-    subtitle = "Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
-    y = "Mean Change (cm)",
+    title = "Manual Measurement: Change in Sediment Pin Length ",
+    subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Sediment Pin Length (cm)",
     x = "Marsh Zone",
     fill= "End of Shoreline",
     tag = "Manualpin_boxplots.Rmd_sedpinchangeEvW_box",
