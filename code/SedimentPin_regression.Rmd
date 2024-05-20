@@ -1,0 +1,179 @@
+---
+title: "Sedimentpin_regression"
+author: "Becca Morris"
+date: "2024-05-14"
+output: html_document
+---
+
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(ggrepel)
+library(ggpubr)
+library(lubridate)
+library(emmeans)
+library(magrittr)
+library(performance)
+library(pastecs)
+library(DHARMa) #Interpretation of model fit
+```
+
+#1. Run these:
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+
+RTKpindata_norefs <- read_xlsx("RTKSedimentPinData.xlsx", sheet = "RTKData_thesispins_norefs_pivot")
+sedpindata <- read_xlsx("Sediment_Pin_Data.xlsx", sheet = "All_Data")
+sedpinmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/Sediment_Pin_Data.xlsx", sheet = "Metadata")
+```
+
+#set up the df for RTK data:
+
+```{r}
+RTKpins <- RTKpindata_norefs %>% 
+  select(-c("midg","midt","upt","upg", "lowt", "lowg", "Date")) %>% #can remove these columns bc the top-ground calculations are already calculated in excel in their own columns
+  mutate_at(c('upper', 'middle'), as.numeric) %>% #removed the POSITX (lubridate) version of date
+  mutate(Date = paste0(Year, "-", Month)) %>% #created my own date to match the sediment pin code
+  mutate(across(where(is.numeric), ~round(., 3))) %>%
+  group_by(Name, Shoreline_End) %>% 
+  rename(Transect_ID = Name)
+
+RTKpinchangeLvNL <- RTKpins %>% 
+  select(Transect_ID, Shoreline_End, upper, middle, lower, Date, Log_Presence) %>% 
+  mutate(UpperDiff = ((last(upper) - first(upper))*-1)*30.48) %>%  # *30.48 converts NADV88 ft to cm
+  mutate(MiddleDiff = ((last(middle) - first(middle))*-1)*30.48) %>% 
+  mutate(LowerDiff = ((last(lower) - first(lower))*-1)*30.48) %>%
+  select(-c('Date', 'upper', 'middle', 'lower')) %>% #remove all unnecessary columns
+  distinct() %>%  #this removes repeated values for each month's calculation
+  pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>%
+  rename(Zone = Pin_Location) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("UpperDiff", "MiddleDiff", "LowerDiff"))) %>% #this puts west first in the legend
+  group_by(Log_Presence, Shoreline_End, Zone) %>% 
+  mutate(Dataset = "RTK")
+```
+
+```{r}
+sedpins <- sedpindata %>% 
+  filter(Month != "April") %>% #removed April measurements so that these will be more consistent with RTK June starting point
+  mutate(Date = paste0(Year, "-", Month)) %>% #make new column combining year and month into date
+  
+  filter(!(Pin_ID == "C6-BW174" & Date == "2022-June")) %>% #this was a huge outlier so I removed it
+  mutate_at(c('Upper', 'Middle','Lower'), as.numeric) %>% #make Upper and Middle columns numeric (have NA's)
+  select(-c("Notes")) %>% #remove "Notes" column
+  mutate(across(where(is.numeric), ~round(., 1))) %>%  #round values to one decimal point
+  group_by(Pin_ID, Shoreline_End) %>% 
+  rename(Transect_ID = Pin_ID)
+#arrange(Date, .by_group = TRUE) %>% 
+
+#Since sedpins df (above already has a "Shoreline_End" column we need to remove this column form the veg meta data sheet so that there aren't issues merging two df's with the same column names
+
+sedpinmetadata <-select(sedpinmetadata, -c("Shoreline_End"))
+
+SedPinDataMerged <- full_join(sedpins, sedpinmetadata, by = "Transect_ID")
+
+sedpinchangeLvNL <- SedPinDataMerged[SedPinDataMerged$Log_Presence != "reference",] %>% 
+  select(Transect_ID, Shoreline_End, Upper, Middle, Lower, Date, Log_Presence) %>% 
+  mutate(UpperDiff = (last(Upper) - first(Upper))*-1) %>% 
+  mutate(MiddleDiff = (last(Middle) - first(Middle))*-1) %>% 
+  mutate(LowerDiff = (last(Lower) - first(Lower))*-1) %>% 
+  select(-c('Date', 'Upper', 'Middle', 'Lower')) %>% #remove all unnecessary columns
+  distinct() %>%  #this removes repeated values for each month's calculation
+  pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>%
+  rename(Zone = Pin_Location) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("UpperDiff", "MiddleDiff", "LowerDiff"))) %>% #this puts west first in the legend
+  group_by(Log_Presence, Shoreline_End, Zone) %>% 
+  mutate(across(where(is.numeric), ~round(., 1))) %>% 
+  mutate(Dataset = "Manual") 
+```
+
+#Now to merge the two data sets together:
+```{r}
+ComboData <-rbind(RTKpinchangeLvNL, sedpinchangeLvNL)
+
+ComboData %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("UpperDiff", "MiddleDiff", "LowerDiff")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) %>% 
+  group_by(Shoreline_End, Zone, Log_Presence)
+```
+
+
+#set up the color-blind color palette
+```{r}
+cbpsed <- c("#0072B2","#E69F00","#D55E00","#009E73", "#56B4E9", "#000000", "#CC79A7", "#F0E442")
+```
+
+
+```{r}
+# Fit a linear regression model with Dataset as a factor
+model <- lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+Dataset+ (1|Transect_ID), data = ComboData)
+
+# Summary of the model
+summary(model)
+plot(model)
+```
+
+```{r}
+compare_point <- ggplot(data = ComboData,
+                  mapping = aes(x = Zone,
+                                y = Sediment_Change,
+                                color = Dataset)) +
+  geom_point(position = position_dodge(0.2)) +
+  scale_color_manual(values = cbpsed) +
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff")) +
+  labs(title = "Manual vs. RTK Sediment Pin Measurements Comparison",
+       x = "Marsh Zone",
+       y = "Sediment Pin Length (cm)")
+
+compare_point
+```
+
+
+```{r}
+compare_box <- ggplot(data = ComboData,
+                  mapping = aes(x = Zone,
+                                y = Sediment_Change,
+                                color = Dataset)) +
+  geom_boxplot(position = position_dodge(0.85)) +
+  coord_cartesian(ylim = c(-20, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  facet_grid(Log_Presence~ Shoreline_End) +
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff"))   #labels renames the columns on the x-axis and limits sets the order in which each is laid out on the x axis
+
+compare_box
+```
+
+```{r}
+compare <- ggplot(data = ComboData,
+                  mapping = aes(x = Zone,
+                                y = Sediment_Change,
+                                color = Dataset)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff"))   
+
+compare
+```
+
+```{r}
+compare2 <- ggplot(Data = ComboData, 
+                   mapping = aes(x = Zone,
+                                 y = Sediment_Change,
+                                 color = Dataset)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff")) +
+  labs(title = "Linear Regression for Two Datasets", x = "X", y = "Y") +
+  theme_minimal()
+
+compare2
+```
+
+```{r}
+
+```
+
+

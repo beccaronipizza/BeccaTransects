@@ -26,8 +26,10 @@ cbpsed <- c("#0072B2","#E69F00","#D55E00","#009E73", "#56B4E9", "#000000", "#CC7
 #prepping the dataframe
 ```{r}
 sedpins <- sedpindata %>% 
-  filter(Month != "April") %>% #removed April measurements soo that these will be more consistent with RTK June starting point
+  filter(Month != "April") %>% #removed April measurements so that these will be more consistent with RTK June starting point
   mutate(Date = paste0(Year, "-", Month)) %>% #make new column combining year and month into date
+  
+  filter(!(Pin_ID == "C6-BW174" & Date == "2022-June")) %>% #this was a huge outlier so I removed it
   mutate_at(c('Upper', 'Middle','Lower'), as.numeric) %>% #make Upper and Middle columns numeric (have NA's)
   select(-c("Notes")) %>% #remove "Notes" column
   mutate(across(where(is.numeric), ~round(., 1))) %>%  #round values to one decimal point

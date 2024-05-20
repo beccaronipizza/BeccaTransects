@@ -17,10 +17,12 @@ library(lme4)
 library(car)
 library(DHARMa)
 library(performance)
+library(MuMIn) #for calc R^2 values
 
 setwd("~/GitHub/BeccaTransects/data")
 
 sedpindata <- read_xlsx("Sediment_Pin_Data.xlsx", sheet = "All_Data")
+sedpinmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/Sediment_Pin_Data.xlsx", sheet = "Metadata")
 ```
 
 
@@ -28,10 +30,12 @@ sedpindata <- read_xlsx("Sediment_Pin_Data.xlsx", sheet = "All_Data")
 ```{r}
 sedpins <- sedpindata %>% 
   mutate(Date = paste0(Year, "-", Month)) %>% #make new column combining year and month into date
+  filter(Month != "April") %>% #removed April measurements so that these will be more consistent with RTK June starting point
   filter(!(Pin_ID == "C1-REF1")) %>% 
   filter(!(Pin_ID == "C2-REF1")) %>% 
   filter(!(Pin_ID == "C4-REF1")) %>% 
   filter(!(Pin_ID == "C7-REF1")) %>% 
+  filter(!(Pin_ID == "C6-BW174" & Date == "2022-June")) %>% #this one was a big outlier so I removed it
   mutate_at(c('Upper', 'Middle','Lower'), as.numeric) %>% #make Upper and Middle columns numeric (have NA's)
   select(-c("Notes")) %>% #remove "Notes" column
   mutate(across(where(is.numeric), ~round(., 1))) %>%  #round values to one decimal point
@@ -41,33 +45,39 @@ sedpins <- sedpindata %>%
 
 
 
-sedpinmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/Sediment_Pin_Data.xlsx", sheet = "Metadata")
 
-sedpinmetadata <-select(sedpinmetadata, -c("Shoreline_End"))
 
-SedPinDataMerged <- full_join(sedpins, sedpinmetadata, by = "Transect_ID")
+sedpinmetadata2 <-select(sedpinmetadata, -c("Shoreline_End")) %>% 
+  filter(!(Transect_ID == "C1-REF1")) %>% 
+  filter(!(Transect_ID == "C2-REF1")) %>% 
+  filter(!(Transect_ID == "C4-REF1")) %>% 
+  filter(!(Transect_ID == "C7-REF1"))
+
+SedPinDataMerged <- full_join(sedpins, sedpinmetadata2, by = "Transect_ID")
+
 
 
 sedpinchange <- SedPinDataMerged %>%   
-  mutate(UpperDiff = (last(Upper) - first(Upper))*-1) %>% 
-  mutate(MiddleDiff = (last(Middle) - first(Middle))*-1) %>% 
-  mutate(LowerDiff = (last(Lower) - first(Lower))*-1) %>% 
+  mutate(UpperDiff = (last(Upper) - first(Upper))) %>%     #don'e need * -1 here since not plotting on aplot
+  mutate(MiddleDiff = (last(Middle) - first(Middle))) %>% 
+  mutate(LowerDiff = (last(Lower) - first(Lower))) %>% 
   #mutate(UpperDiff = ifelse(is.na(UpperDiff) & Pin_ID == "C1-BW6", 3.2, UpperDiff)) %>% 
   #mutate(UpperDiff = ifelse(is.na(UpperDiff) & Pin_ID == "C1-L5", 3.2, UpperDiff)) %>%
   select(-c('Month',`Month_#`, 'Year', 'Date', 'Upper', 'Middle', 'Lower')) %>% #remove all unnecessary columns
   distinct() %>%  #this removes repeated values for each month's calculation
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east"))) %>%
   pivot_longer(UpperDiff:LowerDiff, names_to = "Pin_Location", values_to = "Sediment_Change") %>% 
-  mutate(Pin_Location = as.factor(Pin_Location)) #make Pin_Location a factor
+  mutate(Pin_Location = as.factor(Pin_Location)) %>%  #make Pin_Location a factor
+  mutate(Log_Presence = as.factor(Log_Presence))
 ```
 
 
-# #SKIP TO BOTTOM FOR GLMM# #
+# !!!!!!!!           #SKIP TO BOTTOM FOR GLMM#       !!!!!!!!!     #
 
 
 
 
-# 3. Running a basic GLM: without taking into account interactions (use #4 below):
+# 3. Running a basic GLM: without taking into account interactions (use #4 GLMM below):
 ```{r}
 hist(sedpinchange$Sediment_Change)
 
@@ -207,21 +217,48 @@ check_heteroscedasticity(glm5)  ## when the standard deviations of a predicted v
 #* This data IS homoscedastic.
 ```
 
+
+
+
+
+
 #GLMM:
+
+#sedpin_glmm1 <-  lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+(1|Transect_ID),                  **Pin_Location = Zone         
+	                #data = sedpinchange)
+
+#lmer: This is the function used to fit linear mixed-effects models. It stands for "linear mixed-effects regression."
+#Sediment_Change ~ Shoreline_EndLog_PresencePin_Location: This part specifies the fixed effects part of the model.
+#Sediment_Change: This is the response variable, or the dependent variable, that you are trying to model or predict.
+#Shoreline_End, Log_Presence, Pin_Location: These are the predictor variables, or independent variables.
+#Shoreline_EndLog_PresencePin_Location: The asterisk (*) denotes interaction terms. It expands to include all main effects and interaction terms:
+#Main effects: Shoreline_End, Log_Presence, Pin_Location
+#Two-way interactions: Shoreline_End:Log_Presence, Shoreline_End:Pin_Location, Log_Presence:Pin_Location
+#Three-way interaction: Shoreline_End:Log_Presence:Pin_Location
+#(1|Transect_ID): This part specifies the random effects.
+#(1|Transect_ID): This means that the model includes random intercepts for each level of Transect_ID. The 1 indicates that only the intercept is allowed to vary by #Transect_ID. In other words, it accounts for variability in Sediment Change that is due to differences between Transect ID groups.
+#Transect_ID: This is the grouping factor for the random effect. Each unique value of Transect_ID defines a group for which a random intercept is estimated.
+
 ```{r}
 hist(sedpinchange$Sediment_Change)
 
 #GLMM with interactive effects:
 
-#LOAD the data using the count difference between Aug 2022 and Aug 2023!
+
 sedpin_glmm1 <-  lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+(1|Transect_ID),
                      data = sedpinchange)
 
 
 summary(sedpin_glmm1)
 Anova(sedpin_glmm1)
+
+#R^2 but I don't know if this is working or what
+r_squared <- r.squaredGLMM(sedpin_glmm1)
+print(r_squared)  #R2m = marginal; this *100 gives you a variance percentage that is explained by the fixed effects. R2c = conditional; this *100 gives you a variance percentage that is explained by the fixed and random effects.
+
+
 #use emmeans if you get significant anything other than a main effect
-emmeans(Interactive_glmm, pairwise ~ Shoreline_End|Zone)
+emmeans(sedpin_glmm1, pairwise ~ Shoreline_End|Pin_Location|Log_Presence)
 
 
 sim_res <- simulateResiduals(sedpin_glmm1) # generates fitted model residuals
@@ -230,9 +267,140 @@ testDispersion ( sim_res )
 
 #checking for multicollinearity between variables:
 #The output of the VIF analysis provides the Generalized Variance Inflation Factor (GVIF) for each predictor variable in your model. The GVIF measures the degree of multicollinearity for each predictor variable, taking into account all other predictor variables in the model.
-vif_values <- vif(sedpin_glmm1)
-print(vif_values)
+vif(sedpin_glmm1)
 
-#Generally, for GVIF, values above 10 or 5 are often considered indicative of high multicollinearity, meaning that the variance of the coefficient estimate for that predictor variable is inflated by a factor of 10 or 5, respectively, due to multicollinearity with the other predictor variables.
+#Generally, for GVIF, values above 10 are often considered indicative of high multicollinearity, meaning that the variance of the coefficient estimate for that predictor variable is inflated by a factor of 10 or 5, respectively, due to multicollinearity with the other predictor variables.
+#Interpreting GVIF^(1/(2*Df))
+#Value near 1: Indicates little to no multicollinearity.
+#Values between 1 and 5: Suggests moderate multicollinearity.
+#Values greater than 5: Indicates high multicollinearity, warranting further investigation.
 ```
 
+
+
+
+
+
+
+
+
+
+
+#Did all of the below bc I though that I need to seperate the data into zones due to high GVIF values, but turns out I needed to be looking at the GVIF^(1/2*Df)) value!!
+
+
+# !!!!  DONT NEED   !!!!
+#High VIF value for "Pin Location" in the GLMM model above. Going to seperate by pin location (zone) now:
+
+```{r}
+sedpinchange_U <- sedpinchange[sedpinchange$Pin_Location == "UpperDiff",]
+```
+
+```{r}
+hist(sedpinchange_U$Sediment_Change)
+
+sedpin_lm_U <-  lm(Sediment_Change ~ Shoreline_End*Log_Presence,
+                     data = sedpinchange_U)
+
+
+
+
+
+summary(sedpin_lm_U)
+Anova(sedpin_lm_U)
+
+#R^2 but I don't know if this is working or what
+r_squared <- r.squaredGLMM(sedpin_glmm2)
+print(r_squared)  #R2m = marginal; this *100 gives you a variance percentage that is explained by the fixed effects. R2c = conditional; this *100 gives you a variance percentage that is explained by the fixed and random effects.
+
+
+#use emmeans if you get significant anything other than a main effect
+emmeans(Interactive_glmm, pairwise ~ Shoreline_End|Zone)
+
+
+sim_res <- simulateResiduals(sedpin_lm_U) # generates fitted model residuals
+plot( sim_res ) # draws diagnostic plots along with diagnostic tests
+testDispersion ( sim_res )
+
+#checking for multicollinearity between variables:
+#The output of the VIF analysis provides the Generalized Variance Inflation Factor (GVIF) for each predictor variable in your model. The GVIF measures the degree of multicollinearity for each predictor variable, taking into account all other predictor variables in the model.
+vif(sedpin_lm_U, type = "predictor") #the output recommended setting type = predictor
+
+#Generally, for GVIF, values above 10 are often considered indicative of high multicollinearity, meaning that the variance of the coefficient estimate for that predictor variable is inflated by a factor of 10 or 5, respectively, due to multicollinearity with the other predictor variables.
+```
+
+#Middle:
+```{r}
+sedpinchange_M <- sedpinchange[sedpinchange$Pin_Location == "MiddleDiff",]
+```
+
+```{r}
+hist(sedpinchange_M$Sediment_Change)
+
+sedpin_lm_M <-  lm(Sediment_Change ~ Shoreline_End*Log_Presence,
+                     data = sedpinchange_M)
+
+
+
+
+
+summary(sedpin_lm_M)
+Anova(sedpin_lm_M)
+
+#R^2 but I don't know if this is working or what
+r_squared <- r.squaredGLMM(sedpin_glmm2)
+print(r_squared)  #R2m = marginal; this *100 gives you a variance percentage that is explained by the fixed effects. R2c = conditional; this *100 gives you a variance percentage that is explained by the fixed and random effects.
+
+
+#use emmeans if you get significant anything other than a main effect
+emmeans(sedpin_lm_M, pairwise ~ Shoreline_End|Log_Presence)
+
+
+sim_res <- simulateResiduals(sedpin_lm_M) # generates fitted model residuals
+plot( sim_res ) # draws diagnostic plots along with diagnostic tests
+testDispersion ( sim_res )
+
+#checking for multicollinearity between variables:
+#The output of the VIF analysis provides the Generalized Variance Inflation Factor (GVIF) for each predictor variable in your model. The GVIF measures the degree of multicollinearity for each predictor variable, taking into account all other predictor variables in the model.
+vif(sedpin_lm_M, type = "predictor") #the output recommended setting type = predictor
+
+#Generally, for GVIF, values above 10 are often considered indicative of high multicollinearity, meaning that the variance of the coefficient estimate for that predictor variable is inflated by a factor of 10 or 5, respectively, due to multicollinearity with the other predictor variables.
+```
+
+#Lower:
+```{r}
+sedpinchange_L <- sedpinchange[sedpinchange$Pin_Location == "LowerDiff",]
+```
+
+```{r}
+hist(sedpinchange_L$Sediment_Change)
+
+sedpin_lm_L <-  lm(Sediment_Change ~ Shoreline_End*Log_Presence,
+                     data = sedpinchange_L)
+
+
+
+
+
+summary(sedpin_lm_L)
+Anova(sedpin_lm_L)
+
+#R^2 but I don't know if this is working or what
+r_squared <- r.squaredGLMM(sedpin_lm_L)
+print(r_squared)  #R2m = marginal; this *100 gives you a variance percentage that is explained by the fixed effects. R2c = conditional; this *100 gives you a variance percentage that is explained by the fixed and random effects.
+
+
+#use emmeans if you get significant anything other than a main effect
+emmeans(sedpin_lm_M, pairwise ~ Shoreline_End|Log_Presence)
+
+
+sim_res <- simulateResiduals(sedpin_lm_L) # generates fitted model residuals
+plot( sim_res ) # draws diagnostic plots along with diagnostic tests
+testDispersion ( sim_res )
+
+#checking for multicollinearity between variables:
+#The output of the VIF analysis provides the Generalized Variance Inflation Factor (GVIF) for each predictor variable in your model. The GVIF measures the degree of multicollinearity for each predictor variable, taking into account all other predictor variables in the model.
+vif(sedpin_lm_L, type = "predictor") #the output recommended setting type = predictor
+
+#Generally, for GVIF, values above 10 are often considered indicative of high multicollinearity, meaning that the variance of the coefficient estimate for that predictor variable is inflated by a factor of 10 or 5, respectively, due to multicollinearity with the other predictor variables.
+```

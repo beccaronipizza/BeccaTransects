@@ -333,6 +333,7 @@ TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %
 cbp <- c("#F0E442", "#CC79A7", "#0072B2","#D55E00", "#009E73", "#56B4E9","#E69F00", "#000000")
 ```
 
+
 ```{r}
 TotalVeg_change_barplot <- ggplot(TotalVeg_change, 
                         mapping = aes(x = Zone,
@@ -391,6 +392,84 @@ TotalVeg_change_barplot <- ggplot(TotalVeg_change,
 TotalVeg_change_barplot
 ```
 
+#Same as above but not broken into zone:
+```{r}
+TotalVeg_change3 <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #filtering out reference transects
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(Total_Veg),
+         final_count = last(Total_Veg),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Shoreline_End, Log_Presence) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+
+```{r}
+TotalVeg_change3_barplot <- ggplot(TotalVeg_change3, 
+                        mapping = aes(x = Shoreline_End,
+                                y = mean_cover,
+                                group = Log_Presence,
+                                fill = Log_Presence)) +
+  geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(-4, 30)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs( 
+    title = "Mean % Change in Total Vegetation Cover",
+    subtitle = "From August 2022 to August 2023",
+    x = "Shoreline End",
+    y ="Percent Cover Change (%)",
+    fill = "Log Presence",
+    caption = "*Error bars reflect standard error",
+    tag = "Veg_plots.Rmd-TotalVeg_change3_barplot") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  #geom_text(aes(label = mean_cover, y=0), #geom text is for the labels over the bars
+   #             vjust = -.5,  #higher values shift text down                
+    #            #hjust = 0.5, #higher values shift text horizontally left
+     #           position = position_dodge(0.85),
+      #          color = "black",
+       #     size = 3.25) +
+  geom_label(aes(label = mean_cover, y = -5),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))
+
+TotalVeg_change3_barplot
+```
+
 #Total Veg Change Barplot without Log Presence:
 ```{r}
 TotalVeg_change2 <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
@@ -417,31 +496,30 @@ TotalVeg_change2 <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] 
 TotalVeg_change_barplot2 <- ggplot(TotalVeg_change2, 
                                 mapping = aes(x = Zone,
                                 y = mean_cover,
-                                group = Zone,
-                                fill = Zone)) +
-                                #color = Zone)) +
+                                fill = Shoreline_End,
+                                group = Shoreline_End)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_errorbar(aes(ymin = mean_cover - se_cover,
                     ymax = mean_cover + se_cover),
                 size = 0.5, width = 0.1, color = "black", position = position_dodge(0.9)) +
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
-  facet_grid(~ Shoreline_End) +
   scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
   coord_cartesian(ylim = c(-4, 40)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
     title = "Mean % Change in Total Vegetation Cover",
-    subtitle = "August 2022 to August 2023",
+    subtitle = "From August 2022 to August 2023",
     x = "Marsh Zone",
-    y ="Total Vegetation Cover (%)",
-   #fill = "Log Presence",
+    y ="Percent Cover Change (%)",
+    fill = "Shoreline End",
     caption = "*Error bars reflect standard error",
     tag = "Veg_plots.Rmd-TotalVeg_change_barplot2") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=14),
-        #legend.title = element_text(face = "bold", size=14),
-        #legend.text=element_text(size=12),
-        legend.position = "none",
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
         axis.text.x = element_text(size = 11),
         axis.text.y = element_text(size = 10),
         plot.title = element_text(face = "bold", size = 13),

@@ -154,7 +154,8 @@ Interactive_glmm <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence
 Interactive_glmm3 <-  lmer(sqrt(Total_Veg + 1) ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
                       data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
 
-Anova(Interactive_glmm)
+summary(Interactive_glmm3)
+Anova(Interactive_glmm) #Pr(>Chisq)" stands for "Probability of observing a Chi-square statistic greater than the observed value." It indicates the probability of obtaining a Chi-square statistic as extreme as, or more extreme than, the one computed from the sample data, under the null hypothesis.
 emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) #run this if there is an inteactive effect
 check_normality(Interactive_glmm3) #library(performance) not for glmer.nb models. Use for lmer.
 
@@ -274,6 +275,7 @@ TotalSpFo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] 
          Zone = factor(Zone, levels = c("U", "M", "L")),
          Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
+
 ```{r}
 hist(TotalSpFo_change$mean_cover)
 shapiro.test(TotalSpFo_change$mean_cover) #p-value <0.05 (0.01204) suggesting a non-normal distribution. p > 0.05, accept null that samples come from a normal distribution.
@@ -312,4 +314,101 @@ plot(TwoWay) #Some outliers having an influence?
 #Kruskal-Wallis test: ???
 kruskal.test(mean_cover ~ Log_Presence+Shoreline_End,
             data = TotalVeg_change)
+```
+
+
+
+# SaPa CHANGE:
+```{r}
+SaPa_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #remove reference logs from calculation
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  #filter(Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SaPa),
+         final_count = last(SaPa),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+   #         sd_cover = sd(count_difference, na.rm = TRUE),
+    #        n_cover = n()) %>% 
+  #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+#SaPa GLMM with Julie (copied from GLMM with Julie above. Just applying her moethods. She didn't actually help me with this specific analysis.):
+```{r}
+hist(SaPa_change$SaPa)
+#GLMM with interactive effects:
+
+#LOAD the data using the count difference between Aug 2022 and Aug 2023!
+Interactive_glmm_SaPa <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
+                     data = SaPa_change)
+
+#DON'T use this for now!! Not NORMAL!!
+#LOAD only August 2023 data for this one. Use "Total_Veg" column for response variable:
+Interactive_glmm3 <-  lmer(sqrt(Total_Veg + 1) ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
+                      data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
+
+summary(Interactive_glmm_SaPa)
+Anova(Interactive_glmm_SaPa) #Pr(>Chisq)" stands for "Probability of observing a Chi-square statistic greater than the observed value." It indicates the probability of obtaining a Chi-square statistic as extreme as, or more extreme than, the one computed from the sample data, under the null hypothesis.
+emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) #run this if there is an inteactive effect
+check_normality(Interactive_glmm3) #library(performance) not for glmer.nb models. Use for lmer.
+
+sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
+plot( sim_res ) # draws diagnostic plots along with diagnostic tests
+testDispersion ( sim_res )
+```
+
+
+# SpFo CHANGE:
+```{r}
+SpFo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #remove reference logs from calculation
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  #filter(Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SpFo),
+         final_count = last(SpFo),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+   #         sd_cover = sd(count_difference, na.rm = TRUE),
+    #        n_cover = n()) %>% 
+  #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+#SaPa GLMM with Julie (copied from GLMM with Julie above. Just applying her moethods. She didn't actually help me with this specific analysis.):
+```{r}
+hist(SpFo_change$SpFo)
+#GLMM with interactive effects:
+
+#LOAD the data using the count difference between Aug 2022 and Aug 2023!
+Interactive_glmm_SpFo <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
+                     data = SpFo_change)
+
+#DON'T use this for now!! Not NORMAL!!
+#LOAD only August 2023 data for this one. Use "Total_Veg" column for response variable:
+Interactive_glmm3 <-  lmer(sqrt(Total_Veg + 1) ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
+                      data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
+
+summary(Interactive_glmm_SpFo)
+Anova(Interactive_glmm_SpFo) #Pr(>Chisq)" stands for "Probability of observing a Chi-square statistic greater than the observed value." It indicates the probability of obtaining a Chi-square statistic as extreme as, or more extreme than, the one computed from the sample data, under the null hypothesis.
+emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) #run this if there is an inteactive effect
+check_normality(Interactive_glmm3) #library(performance) not for glmer.nb models. Use for lmer.
+
+sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
+plot( sim_res ) # draws diagnostic plots along with diagnostic tests
+testDispersion ( sim_res )
 ```
