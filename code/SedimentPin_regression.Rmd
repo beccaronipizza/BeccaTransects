@@ -94,11 +94,17 @@ sedpinchangeLvNL <- SedPinDataMerged[SedPinDataMerged$Log_Presence != "reference
 ```{r}
 ComboData <-rbind(RTKpinchangeLvNL, sedpinchangeLvNL)
 
+
 ComboData %>% 
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
          Zone = factor(Zone, levels = c("UpperDiff", "MiddleDiff", "LowerDiff")),
-         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) %>% 
-  group_by(Shoreline_End, Zone, Log_Presence)
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")),
+         Dataset = factor(Dataset, levels = c("RTK", "Manual"))  # Ensure Dataset is a factor
+  )
+
+# # Reshape the data so that RTK and manual sediment changes are in separate columns
+# Reshaped_Data <- ComboData %>% 
+#   spread(key = Dataset, value = Sediment_Change)
 ```
 
 
@@ -107,14 +113,53 @@ ComboData %>%
 cbpsed <- c("#0072B2","#E69F00","#D55E00","#009E73", "#56B4E9", "#000000", "#CC79A7", "#F0E442")
 ```
 
+```{r}
+OneToOne_combo <- ggplot(ComboData, aes(x = Sediment_Change, y = Sediment_Change,
+                                      color = Zone,
+                                      shape = Dataset)) +
+  geom_point(size = 3) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  scale_color_manual(values = cbpsed,
+                     labels = c("UpperDiff" = "Upper", "MiddleDiff" = "Middle", "LowerDiff" = "Lower")) +
+  scale_shape_manual(values = c("RTK" = 16, "Manual" = 1)) +  # Custom shapes: filled circle and circle outline
+  labs(x = "RTK Sediment Pin Length Change (cm)", 
+       y = "Manual Sediment Pin Length Change (cm)", 
+       title = "Manual vs RTK Sediment Pin Change Comparison by Marsh Zone",
+       color = "Marsh Zone",
+       shape = "Measurement Type",
+       tag = "SedimentPin_regression.RMD_OneToOne") +
+  theme(
+    plot.tag = element_text(size = 6, angle = 90),
+    plot.tag.position = "right") +
+  coord_fixed()
+
+OneToOne_combo
+```
+```
+
 
 ```{r}
-# Fit a linear regression model with Dataset as a factor
-model <- lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+Dataset+ (1|Transect_ID), data = ComboData)
+OneToOne <- ggplot(Reshaped_Data, aes(x = RTK, y = Manual,
+                                      group = Shoreline_End,
+                                      color = Zone,
+                                      shape = Shoreline_End)) +
+  geom_point(size = 3) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
+  scale_color_manual(values = cbpsed,
+                     labels = c("UpperDiff" = "Upper", "MiddleDiff" = "Middle", "LowerDiff" = "Lower")) +
+  scale_shape_manual(values = c("east" = 16, "west" = 1)) +  # Custom shapes: filled circle and circle outline
+  labs(x = "RTK Sediment Pin Length Change (cm)", 
+       y = "Manual Sediment Pin Length Change (cm)", 
+       title = "Manual vs RTK Sediment Pin Change Comparison by Marsh Zone",
+       color = "Marsh Zone",
+       shape = "End of Shoreline",
+       tag = "SedimentPin_regression.RMD_OneToOne") +
+  theme(
+    plot.tag = element_text(size = 6, angle = 90),
+    plot.tag.position = "right") +
+  coord_fixed()
 
-# Summary of the model
-summary(model)
-plot(model)
+OneToOne
 ```
 
 ```{r}

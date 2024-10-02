@@ -204,3 +204,62 @@ sedpinchangeLvNL_plot <- ggplot(sedpinchangeLvNL,
 sedpinchangeLvNL_plot 
 ```
 
+#EvW with Log Variable
+```{r}
+sedpinchangeEvWandLvNL_plot <- ggplot(sedpinchangeLvNL, 
+                          aes(x= Pin_Location, 
+                              y= mean_difference, 
+                              group = Shoreline_End,
+                              fill = Shoreline_End)) +
+  geom_hline(yintercept=0, linetype =1, color = "black") +
+  geom_col(position = position_dodge(0.87), color = "black", width = 0.85) +
+  geom_errorbar(aes(
+    ymin= mean_difference-se_difference, ymax= mean_difference+se_difference), size = 0.5, 
+    position = position_dodge(0.9), color= "black", width= .1) +
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower"), limits = c("UpperDiff", "MiddleDiff", "LowerDiff")) +  #labels renames the columns on the x-axis and limits sets the order in which each is laid out on the x axis
+  #geom_text_repel(aes(label = mean_difference, force = 1)) + #not sure why the "force" aes isnt working
+  coord_cartesian(ylim = c(-8, 8)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  facet_grid(~ Log_Presence) +
+  scale_fill_manual(values = cbpsed) +
+  labs(
+    title = "Manual Measurement: Mean Change in Sediment Pin Length ",
+    subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Mean Change (cm)",
+    x = "Marsh Zone",
+    fill= "End of Shoreline",
+    tag = "Manualpin_plots.Rmd_sedpinchangeEvWandLvNL_plot",
+    caption = "*Error bars reflect standard error  *n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black")) +
+  #geom_text(aes(label = Hectares), #geom text is for the labels over the bars
+   #             vjust = -0.8,  #higher values shift text down
+    #            hjust = 0.5, #higher values shift text horizontally left
+     #           position = position_stack(),
+      #          color = "black",
+       #         size = 3.25) +
+  geom_label(aes(label = mean_difference, y = -9),  # Adjust the x-coordinate
+           vjust = -0.5,
+           color = "black",
+           position = position_dodge(0.85),
+           size = 3.25,
+           fill = "lightgrey",
+           label.padding = unit(0.15, "lines"),
+           label.r = unit(0.15, "lines"))                         
+
+sedpinchangeEvWandLvNL_plot
+```
+

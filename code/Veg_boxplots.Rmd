@@ -15,6 +15,8 @@ library(gridExtra)
 library(ggtext)
 library(ggpubr)
 library(mdthemes)
+library(ggsignif)
+library(ggplot2)
 ```
 
 ```{r}
@@ -98,6 +100,7 @@ TotalVeg_change_box <- ggplot(TotalVeg_change,
                                   fill = Log_Presence,
                                   color = log_Presence)) +
   geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
   facet_grid(~ Shoreline_End) +
@@ -109,7 +112,7 @@ TotalVeg_change_box <- ggplot(TotalVeg_change,
     y ="Percent Cover Change (%)",
     fill = "Log Presence",
     #caption = "*Whiskers reflect 1.5*IQR",
-    tag = "Veg_plots.Rmd-TotalVeg_change_box") +
+    tag = "Veg_boxplots.Rmd-TotalVeg_change_box") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=13),
         legend.title = element_text(face = "bold", size=09),
@@ -130,6 +133,49 @@ TotalVeg_change_box <- ggplot(TotalVeg_change,
   
 
 TotalVeg_change_box
+```
+
+#EvW and LvNL:
+```{r}
+TotalVeg_change_box2 <- ggplot(TotalVeg_change,
+                                  mapping = aes(x = Zone,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Log_Presence) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+    title = "Change in Total Vegetation Cover (%)",
+    subtitle = "From August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Percent Cover Change (%)",
+    fill = "End of Shoreline",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots.Rmd-TotalVeg_change_box2") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+TotalVeg_change_box2
 ```
 
 
@@ -153,7 +199,7 @@ TotalVeg_change_boxEvW <- ggplot(TotalVeg_change,
     y ="Total Vegetation Cover (%)",
    fill = "Log Presence",
     #caption = "*Whiskers reflect 1.5*IQR",
-    tag = "Veg_plots.Rmd-TotalVeg_change_boxEvW") +
+    tag = "Veg_boxplots.Rmd-TotalVeg_change_boxEvW") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=14),
         legend.title = element_text(face = "bold", size=14),
@@ -206,6 +252,7 @@ SaPa_change_box <- ggplot(SaPa_change,
                                   fill = Log_Presence,
                                   color = log_Presence)) +
   geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
   facet_grid(~ Shoreline_End) +
@@ -217,7 +264,7 @@ SaPa_change_box <- ggplot(SaPa_change,
     y ="Percent Cover Change (%)",
    fill = "Log Presence",
     #caption = "*Whiskers reflect 1.5*IQR",
-    tag = "Veg_plots.Rmd-SaPa_change_box") +
+    tag = "Veg_boxplots.Rmd-SaPa_change_box") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=13),
         legend.title = element_text(face = "bold", size=09),
@@ -238,6 +285,226 @@ SaPa_change_box <- ggplot(SaPa_change,
   
 
 SaPa_change_box
+```
+
+
+```{r}
+SaPa_change_box2 <- ggplot(SaPa_change,
+                                  mapping = aes(x = Zone,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Log_Presence) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+     title = expression(paste(bold("Change in " *italic("Salicornia pacifica")* " Cover (%)"))),
+    subtitle = "From August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Percent Cover Change (%)",
+   fill = "End of Shoreline",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots.Rmd-SaPa_change_box2") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+SaPa_change_box2
+```
+
+#Sapa GLMM results significant for shore end and zone, so we will plot only those two variables:
+```{r}
+SaPa_change2 <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SaPa),
+         final_count = last(SaPa),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End) %>% 
+  #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+  #          sd_cover = sd(count_difference, na.rm = TRUE),
+  #          n_cover = n()) %>% 
+  #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("U", "M", "L"))) #%>% 
+         #Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+
+```
+
+```{r}
+n_values_SaPa <- SaPa_change2 %>%
+  group_by(Zone,Shoreline_End) %>%
+  summarize(n = n())
+```
+
+```{r}
+SaPa_change_box3 <- ggplot(SaPa_change2,
+                                  mapping = aes(x = Zone,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #makes the diamond shape for the means
+  geom_text(data = n_values_SaPa, aes(x = Zone, y = min(SaPa_change2$count_difference) - 2,  #adds the n-values to the bottom fo the plot
+                                      label = paste0("n = ", n)), 
+            position = position_dodge(0.55), vjust = 1, size = 3, color = "black") +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+     title = expression(paste(bold("Change in " *italic("Sarcocornia pacifica")* " Cover (%)"))),
+    subtitle = "From August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Percent Cover Change (%)",
+   fill = "End of Shoreline",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots.Rmd-SaPa_change_box3") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+#this section adds significance lines and asteriks. Doesn't work if you include it in the code above. 
+SaPa_change_box3 <- SaPa_change_box3 +
+  geom_signif(comparisons = list(c("U", "L"), c("M","L")), map_signif_level = TRUE, annotations = "***", 
+              show.legend = FALSE,
+              color = "black",
+              y_position = c(
+                max(SaPa_change2$count_difference) + 10,  #adds space above the highest y-value for count_difference
+                max(SaPa_change2$count_difference) + 5), #this moves the asterisks up/down relative to the significance line
+              tip_length = 0.1, # Adjust tip length to control the length of the line from the bars
+              vjust = 0.65) #+ #Closer to 1 lowers asterisks
+  # stat_summary(
+  #   fun = mean,
+  #   geom = "text",
+  #   aes(label = sprintf("%.2f", after_stat(y))),  # Format mean values
+  #   position = position_dodge(0.55),
+  #   size = 3,  # Adjust size as needed
+  #   vjust = 0.28,# Adjust vertical positioning
+  #   hjust = -0.5,
+  #   color = "black")
+
+SaPa_change_box3
+```
+
+#Also, to show significance between shoreline end only:
+```{r}
+SaPa_change3 <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SaPa),
+         final_count = last(SaPa),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Shoreline_End) %>% 
+  #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+  #          sd_cover = sd(count_difference, na.rm = TRUE),
+  #          n_cover = n()) %>% 
+  #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")))
+         #Zone = factor(Zone, levels = c("U", "M", "L"))) #%>% 
+         #Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+
+```
+
+```{r}
+SaPa_change_box4 <- ggplot(SaPa_change3,
+                                  mapping = aes(x = Shoreline_End,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  #scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+     title = expression(paste(bold("Change in " *italic("Salicornia pacifica")* " Cover (%)"))),
+    subtitle = "From August 2022 to August 2023",
+    x = "Shoreline End",
+    y ="Percent Cover Change (%)",
+   fill = "End of Shoreline",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots.Rmd-SaPa_change_box4") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "none",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+#this section adds significance lines and asterisk. Doesn't work if you include it in the code above. 
+SaPa_change_box4 <- SaPa_change_box4 +
+  geom_signif(comparisons = list(c("west", "east")), map_signif_level = TRUE, annotations = "***",
+              color = "black",
+              show.legend = FALSE,
+              vjust = 0.65) +
+  stat_summary(
+    fun = mean,
+    geom = "text",
+    aes(label = sprintf("%.2f", after_stat(y))),  # Format mean values
+    position = position_dodge(0.55),
+    size = 3,  # Adjust size as needed
+    vjust = 0.28,# Adjust vertical positioning
+    hjust = -0.5,
+    color = "black")
+              
+              
+             
+
+SaPa_change_box4
 ```
 
 #Now for Spartina:
@@ -263,6 +530,12 @@ SpFo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>%
 ```
 
 ```{r}
+n_values_SpFo <- SpFo_change %>%
+  group_by(Zone,Shoreline_End) %>%
+  summarize(n = n())
+```
+
+```{r}
 SpFo_change_box <- ggplot(SpFo_change,
                                   mapping = aes(x = Zone,
                                   y = count_difference,
@@ -270,6 +543,7 @@ SpFo_change_box <- ggplot(SpFo_change,
                                   fill = Log_Presence,
                                   color = log_Presence)) +
   geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #makes the diamond shape for the means
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
   facet_grid(~ Shoreline_End) +
@@ -281,7 +555,7 @@ SpFo_change_box <- ggplot(SpFo_change,
     y ="Percent Cover Change (%)",
    fill = "Log Presence",
     #caption = "*Whiskers reflect 1.5*IQR",
-    tag = "Veg_plots.Rmd-SpFo_change_box") +
+    tag = "Veg_boxplots.Rmd-SpFo_change_box") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=13),
         legend.title = element_text(face = "bold", size=09),
@@ -304,7 +578,125 @@ SpFo_change_box <- ggplot(SpFo_change,
 SpFo_change_box
 ```
 
-# Total Change WITHOUT Log Variable:
+
+```{r}
+SpFo_change_box2 <- ggplot(SpFo_change,
+                                  mapping = aes(x = Zone,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #makes the diamond shape for the means
+  geom_text(data = n_values_SpFo, aes(x = Zone, y = min(SaPa_change2$count_difference) - 2,  #adds the n-values to the bottom fo the plot
+                                      label = paste0("n = ", n)), 
+            position = position_dodge(0.55), vjust = 1, size = 3, color = "black") +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  facet_grid(~ Log_Presence) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+     title = expression(paste(bold("Change in " *italic("Spartina foliosa")* " Cover (%)"))),
+    subtitle = "From August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Percent Cover Change (%)",
+   fill = "End of Shoreline",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots.Rmd-SpFo_change_box2") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+SpFo_change_box2
+```
+
+#Ok, so Spartina was only significant between zones. Need to make plot that excludes log presence.
+```{r}
+SpFo_change_box3 <- ggplot(SpFo_change,
+                                  mapping = aes(x = Zone,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
+  geom_text(data = n_values_SpFo, aes(x = Zone, y = min(SpFo_change$count_difference) - 2, 
+                                      label = paste0("n = ", n)),
+            position = position_dodge(0.55), vjust = 1, size = 3, color = "black") +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  #facet_grid(~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+     title = expression(paste(bold("Change in " *italic("Spartina foliosa")* " Cover (%)"))),
+    subtitle = "From August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Percent Cover Change (%)",
+   fill = "Shoreline_End",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots.Rmd-SpFo_change_box3") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+
+# Calculate maximum y-values for the plot
+max_y <- max(SpFo_change$count_difference)
+
+# Create a staggered y_position vector
+staggered_y_positions <- c(
+  max_y + 10,     # Base position
+  max_y + 17,     # 5 units above the base
+  max_y + 22      # 10 units above the base
+)
+
+# Add significance lines and asterisks with staggered positions
+SpFo_change_box3 <- SpFo_change_box3 +
+  geom_signif(
+    comparisons = list(c("U", "M"), c("U", "L"), c("M", "L")),
+    map_signif_level = TRUE,
+    annotations = c("***", "***", "***"),
+    show.legend = FALSE,
+    color = "black",
+    y_position = staggered_y_positions[1:3],  # Use staggered positions for the lines
+    tip_length = 0,
+    vjust = 0.65
+  )
+
+
+SpFo_change_box3    
+```
+  
+
+
+# Total Change WITH Log Variable:
 ```{r}
 TotalVeg_change_nozone <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
   filter(Date == "2022-August" | Date == "2023-August") %>%
@@ -314,7 +706,7 @@ TotalVeg_change_nozone <- vegdatamerged[(vegdatamerged$Log_Presence != "referenc
          final_count = last(Total_Veg),
          count_difference = (final_count - initial_count)) %>%
   ungroup() %>% 
-  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  filter(!(Date == "2022-August")) %>%  #Remove 2022-August records to avoid duplicates for summary
   group_by(Date, Shoreline_End, Log_Presence) %>% 
   #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
   #          sd_cover = sd(count_difference, na.rm = TRUE),
@@ -322,7 +714,7 @@ TotalVeg_change_nozone <- vegdatamerged[(vegdatamerged$Log_Presence != "referenc
   #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
   mutate(across(where(is.numeric), ~round(., 0))) %>% 
   mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
-         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) 
 ```
 
 ```{r}
@@ -364,5 +756,126 @@ TotalVeg_change_box_NZ <- ggplot(TotalVeg_change_nozone,
   
 
 TotalVeg_change_box_NZ
+```
+
+```{r}
+TotalVeg_change_box_NZ2 <- ggplot(TotalVeg_change_nozone,
+                                  mapping = aes(x = Log_Presence,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+    title = "Change in Total Vegetation Cover (%)",
+    subtitle = "From August 2022 to August 2023",
+    x = "Log Presence",
+    y ="Percent Cover Change (%)",
+    fill = "End of Shoreline",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots.Rmd-TotalVeg_change_box_NZ2") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+TotalVeg_change_box_NZ2
+```
+
+
+make one with West vs East ONLY:
+```{r}
+TotalVeg_changeEvW <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(Total_Veg2),
+         final_count = last(Total_Veg2),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Shoreline_End) %>% 
+  summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+            sd_cover = sd(count_difference, na.rm = TRUE),
+            n_cover = n(),
+            n = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")))
+         #Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+```{r}
+TotalVeg_change_box_EvW <- ggplot(TotalVeg_change_nozone,
+                                  mapping = aes(x = Shoreline_End,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+    title = "Change in Total Vegetation Cover (%)",
+    subtitle = "From August 2022 to August 2023",
+    x = "Shoreline End",
+    y ="Percent Cover Change (%)",
+    fill = "End of Shoreline",
+    #caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots.Rmd-TotalVeg_change_box_EvW") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        #legend.title = element_text(face = "bold", size=09),
+        #legend.text=element_text(size=09),
+        legend.position = "none",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+#this section adds significance lines and asterisk. Doesn't work if you include it in the code above. 
+TotalVeg_change_box_EvW <- TotalVeg_change_box_EvW +
+  geom_signif(comparisons = list(c("west", "east")), map_signif_level = TRUE, annotations = "***",
+              color = "black",
+              show.legend = FALSE,
+              vjust = 0.65) 
+#this section will add the mean values in number format to the plot.
+  # stat_summary(                 
+  #   fun = mean,
+  #   geom = "text",
+  #   aes(label = sprintf("%.2f", after_stat(y))),  # Format mean values
+  #   position = position_dodge(0.55),
+  #   size = 3,  # Adjust size as needed
+  #   vjust = 0.28,# Adjust vertical positioning
+  #   hjust = -0.5,
+  #   color = "black")
+              
+
+TotalVeg_change_box_EvW
 ```
 

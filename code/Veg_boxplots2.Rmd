@@ -1,0 +1,155 @@
+---
+title: "Veg_boxplots_pt2"
+author: "Becca Morris"
+date: "2024-10-02"
+output: html_document
+---
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(dplyr)
+library(viridisLite)
+library(lubridate)
+library(naniar) #allows you to use the replace_with_na_at()
+library(gridExtra)
+library(ggtext)
+library(ggpubr)
+library(mdthemes)
+library(ggsignif)
+library(ggplot2)
+```
+
+```{r}
+setwd("~/GitHub/BeccaTransects/data")
+
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_new") #for log zone removal use sheet = "Data2_LZ" <- make sure htat right name
+```
+
+```{r}
+#calculating change in cover for total veg (where total can exceed 25) and then the mean change for each zone, shoreline end, and log presence:
+
+vegdata2 <- vegdata %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 'Taraxacum', 'Coytote_Bush','BoMa', 'DiSp', 'AtPx', 'PoAr', 'AcMa', 'GrSt', 'MixedSeedlings','GrGR', 'Melilotus', 'MePo'), as.numeric) %>% 
+  mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
+  mutate(SaSp = SaPa + SaDe) %>% 
+  mutate(SaPa_new = SaPa + ((SaPa/SaSp)*PicklePups)) %>%      #combine and distribute picklepup category amongst the two species
+  mutate(SaDe_new = SaDe + ((SaDe/SaSp)*PicklePups)) %>% 
+  mutate(across(c('SaPa_new', 'SaDe_new'),(~replace_na(., 0)))) %>%   #where the calculations above = 0, R was turning them into NaN's
+  mutate(SaPa_new = ifelse(SaPa > 25, 25, SaPa_new)) %>%      #these lines tell it where these columns exceed 25 quad's, to just set them = to 25
+  mutate(SaDe_new = ifelse(SaDe_new > 25, 25, SaDe_new)) %>% 
+  mutate(Grass = GrGR + LeTr + MixedSeedlings) %>% 
+  mutate(Grass = ifelse(Grass > 25, 25, Grass)) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_Veg is simply what is remaining after subtracting the bare ground
+  #mutate(across(SpFo:Total_Veg, ~ .x*4)) %>%  #makes percentages out of the counts
+  mutate(across(everything(), ~replace(.x, is.nan(.x), 0))) %>%
+  select(-c('GrGR','LeTr','MixedSeedlings','PicklePups', 'SaPa','SaDe','SaSp')) %>% #removed SaSp column so it would not be counted as part of 'Total_Veg2' column in addition to the SaPa and SaDe columns
+  rename(SaPa = SaPa_new, SaDe = SaDe_new) %>% #putting their original names back after the calculation above
+  mutate(across(c('SaPa', 'SaDe'), ~round(., 0))) %>% 
+  #relocate(Log_Zone, .after = last_col()) %>%    #if you want to use log zone you need to upload the vegdata spreadsheet using the Data_2_LZ sheet.
+  mutate(across(SpFo:Total_Veg, ~ .x*4)) %>% #makes everything into percentages
+  mutate(Total_Veg2 = rowSums(across(SpFo:Grass))) %>% #Total_Veg2 adds all the total quadrants each species is present in and combining them all into one total count (can exceed 100)
+  mutate(Date = paste0(Year, "-", Month)) #%>% 
+  #filter(is.na(Log_Zone))  #remove rows where the quad that lands on log and the one quad that lands above and below are marked as "R" for remove
+  #filter(!Total_Veg2 == 0)  #remove all rows where total_veg is equal to 0
+
+vegmetadata %>% 
+  select(Transect_ID, Shoreline_End, Log_Presence)
+
+vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>% 
+  select(-c(...9:...12)) 
+```
+
+
+```{r}
+TotalVeg_change_nozone <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(Total_Veg),
+         final_count = last(Total_Veg),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #Remove 2022-August records to avoid duplicates for summary
+  group_by(Date, Shoreline_End, Log_Presence) %>% 
+  #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+  #          sd_cover = sd(count_difference, na.rm = TRUE),
+  #          n_cover = n()) %>% 
+  #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log"))) 
+```
+
+#This calculates the n-value for each shoreline end so that you can add it to the plot below
+```{r}
+n_values <- TotalVeg_change_nozone %>%
+  group_by(Shoreline_End) %>%
+  summarize(n = n())
+```
+
+#This plots just west vs east total vegetation
+```{r}
+TotalVeg_change_box_NOZONE <- ggplot(TotalVeg_change_nozone,
+                                  mapping = aes(x = Shoreline_End,
+                                  y = count_difference,
+                                  fill = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  geom_text(data = n_values, aes(x = Shoreline_End, y = max(TotalVeg_change_nozone$count_difference) + 2, label = paste0("n = ", n)), 
+            vjust = 35.5, nudge_x = 0.15, size = 3, color = "black") + #this add the n_count to the plot. vjust moves it down, and nudge_x moved it right
+  scale_fill_manual(values = cbp) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+    title = "Change in Total Vegetation Cover (%)",
+    subtitle = "From August 2022 to August 2023",
+    x = "Shoreline End",
+    y ="Percent Cover Change (%)",
+    fill = "End of Shoreline",
+    #caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots2.Rmd-TotalVeg_change_box_EvW") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        #legend.title = element_text(face = "bold", size=09),
+        #legend.text=element_text(size=09),
+        legend.position = "none",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+#this section adds significance lines and asterisk. Doesn't work if you include it in the code above. 
+TotalVeg_change_box_EvW <- TotalVeg_change_box_EvW +
+  geom_signif(comparisons = list(c("west", "east")), map_signif_level = TRUE, annotations = "***",
+              color = "black",
+              show.legend = FALSE,
+              vjust = 0.65) 
+#this section will add the mean values in number format to the plot.
+  # stat_summary(                 
+  #   fun = mean,
+  #   geom = "text",
+  #   aes(label = sprintf("%.2f", after_stat(y))),  # Format mean values
+  #   position = position_dodge(0.55),
+  #   size = 3,  # Adjust size as needed
+  #   vjust = 0.28,# Adjust vertical positioning
+  #   hjust = -0.5,
+  #   color = "black")
+              
+
+TotalVeg_change_box_NOZONE
+```
+
+

@@ -501,9 +501,10 @@ GIS_Hectares_line
 
 #Now to Plot Veg Percent Change for Dec 2021 to Aug 2023:
 ```{r}
-GIS_PercChange_byZandS <- GISvegdata_percent %>% 
+GIS_PercChange_byZandS <- GISvegdata_percent  %>% 
   filter(Zone !="All") %>% 
   filter(year == "3") %>% 
+  filter(VegCom == "") %>% 
   mutate(Shore_end = factor(Shore_end, levels = c("west","east")),
          Zone = factor(Zone, levels = c("Upper","Middle","Lower"))) %>% #make it so that facet grid orders shoreline end from west to east
   select(Zone, Shore_end, Percent_change, Initial_year, Final_year, year) %>% 
@@ -512,48 +513,48 @@ GIS_PercChange_byZandS <- GISvegdata_percent %>%
 ```
 
 ```{r}
-GIS_veg_PercentChange <- ggplot(GIS_PercChange_byZandS,
-                               mapping = aes(x = Zone,
+GIS_veg_PercentChange_byS <- ggplot(GIS_PercChange_byZandS,
+                               mapping = aes(x = year,
                                              y = Percent_change,
-                                             group = Zone,
-                                             fill = Zone)) +
+                                             group = Shore_end,
+                                             fill = Shore_end)) +
   geom_col(position = position_dodge(0.85),color = "black", width = 0.85) +
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbp) +
-  facet_grid(~ Shore_end) +
-  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
-  coord_cartesian(ylim = c(-4, 60)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  facet_grid(~ Zone) +
+  #scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  coord_cartesian(ylim = c(30, 60)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs( 
-    title = "Sears Point % Veg Cover Change After 2 Year via GIS & Aerial Imagery",
-    subtitle = "December 2021 to August 2023",
-    x = "Marsh Zone",
+    title = "Sears Point Percent Veg Cover Change (%) via GIS & Aerial Imagery",
+    subtitle = "From December 2021 to August 2023",
+    x = "Shoreline End",
     y ="Total Vegetation Cover (%)",
-   #fill = "Log Presence",
+   fill = "Shoreline End",
    #caption = "*Error bars reflect standard error",
-    tag = "Veg_plots_GIS.Rmd-GIS_veg_PercentChange") +
+    tag = "Veg_plots_GIS.Rmd-GIS_veg_PercentChange_byS") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=12),
-        #legend.title = element_text(face = "bold", size=14),
-        #legend.text=element_text(size=12),
-        legend.position = "none",
-        axis.text.x = element_text(size = 11),
+        legend.title = element_text(face = "bold", size=14),
+        legend.text=element_text(size=12),
+        legend.position = "top",
+        axis.text.x = element_blank(),
         axis.text.y = element_text(size = 10),
         plot.title = element_text(face = "bold", size = 11),
         plot.caption = element_text(size = 07),
         plot.subtitle = element_text(size = 10),
         plot.tag = element_text(size = 6, angle = 90),
         plot.tag.position = "right",
-        strip.text = element_text(size = 13, color = "black")) +
-  geom_label(aes(label = Percent_change, y = -06.25),  # Adjust the x-coordinate
-           vjust = -0.5,
-           color = "black",
-           position = position_dodge(0.85),
-           size = 3.25,
-           fill = "lightgrey",
-           label.padding = unit(0.15, "lines"),
-           label.r = unit(0.15, "lines"))
+        strip.text = element_text(size = 13, color = "black")) #+
+  #geom_label(aes(label = Percent_change, y = -06.25),  # Adjust the x-coordinate
+  #         vjust = -0.5,
+  #         color = "black",
+  #         position = position_dodge(0.85),
+  #         size = 3.25,
+  #         fill = "lightgrey",
+  #         label.padding = unit(0.15, "lines"),
+  #         label.r = unit(0.15, "lines"))
 
-GIS_veg_PercentChange
+GIS_veg_PercentChange_byS
 ```
 
 #Now to Plot Veg Percent Change for Dec 2021 to Aug 2022:

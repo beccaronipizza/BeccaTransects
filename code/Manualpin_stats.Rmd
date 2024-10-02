@@ -40,14 +40,17 @@ sedpins <- sedpindata %>%
   select(-c("Notes")) %>% #remove "Notes" column
   mutate(across(where(is.numeric), ~round(., 1))) %>%  #round values to one decimal point
   group_by(Pin_ID, Shoreline_End) %>% 
-  rename(Transect_ID = Pin_ID)
+  rename(Transect_ID = Pin_ID) %>% 
+  filter(Transect_ID != "C7-L224") %>%  #removing this transect to see if it makes a difference in the model output
+  filter(Transect_ID != "C7-L185") %>%  #removing this transect to see if it makes a difference in the model output
+  filter(Transect_ID != "C6-L161")   #removing this transect to see if it makes a difference in the model output
 #arrange(Date, .by_group = TRUE) %>% 
 
 
 
 
 
-sedpinmetadata2 <-select(sedpinmetadata, -c("Shoreline_End")) %>% 
+sedpinmetadata2 <- select(sedpinmetadata, (-Shoreline_End)) %>% 
   filter(!(Transect_ID == "C1-REF1")) %>% 
   filter(!(Transect_ID == "C2-REF1")) %>% 
   filter(!(Transect_ID == "C4-REF1")) %>% 
@@ -72,7 +75,7 @@ sedpinchange <- SedPinDataMerged %>%
 ```
 
 
-# !!!!!!!!           #SKIP TO BOTTOM FOR GLMM#       !!!!!!!!!     #
+# !!!!!!!!           #SKIP TO line 242 for LMM#       !!!!!!!!!     #
 
 
 
@@ -222,7 +225,7 @@ check_heteroscedasticity(glm5)  ## when the standard deviations of a predicted v
 
 
 
-#GLMM:
+#LMM:
 
 #sedpin_glmm1 <-  lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+(1|Transect_ID),                  **Pin_Location = Zone         
 	                #data = sedpinchange)
@@ -245,20 +248,17 @@ hist(sedpinchange$Sediment_Change)
 #GLMM with interactive effects:
 
 
-sedpin_glmm1 <-  lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+(1|Transect_ID),
+sedpin_lmm <-  lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+(1|Transect_ID),
                      data = sedpinchange)
 
 
-summary(sedpin_glmm1)
-Anova(sedpin_glmm1)
+summary(sedpin_lmm)
+Anova(sedpin_lmm)
 
-#R^2 but I don't know if this is working or what
-r_squared <- r.squaredGLMM(sedpin_glmm1)
-print(r_squared)  #R2m = marginal; this *100 gives you a variance percentage that is explained by the fixed effects. R2c = conditional; this *100 gives you a variance percentage that is explained by the fixed and random effects.
 
 
 #use emmeans if you get significant anything other than a main effect
-emmeans(sedpin_glmm1, pairwise ~ Shoreline_End|Pin_Location|Log_Presence)
+emmeans(sedpin_lmm, pairwise ~ Shoreline_End|Pin_Location)
 
 
 sim_res <- simulateResiduals(sedpin_glmm1) # generates fitted model residuals

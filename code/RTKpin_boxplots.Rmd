@@ -58,6 +58,70 @@ RTKpinschangeEvW <- RTKpins %>%
 cbprtk <- c("#009E73", "#56B4E9", "#F0E442" , "#E69F00", "#000000", "#0072B2","#D55E00", "#CC79A7","#999999")
 ```
 
+#EvW only. No marsh zone or log:
+```{r}
+RTKpinchangeEvW_box2 <- ggplot(RTKpinschangeEvW,
+                                  mapping = aes(x = Shoreline_End,
+                                  y = Sediment_Change,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
+  geom_text(data = n_values_RTKpins, aes(x = Shoreline_End, y = -25,  # Adjust y-position as needed
+                                         label = paste0("n = ", n)),
+            position = position_dodge(0.55), vjust = 1, size = 3, color = "black") +
+  # stat_summary(
+  #   fun = mean,
+  #   geom = "text",
+  #   aes(label = sprintf("%.2f", after_stat(y))),  # Format mean values
+  #   position = position_dodge(0.55),
+  #   size = 3,  # Adjust size as needed
+  #   vjust = 0.28,# Adjust vertical positioning
+  #   hjust = -0.5,
+  #   color = "black") +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbprtk) +
+  coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  labs(
+    title = "RTK Measurement: Change in Sediment Pin Length",
+    subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Change in Pin Length (cm)",
+    x = "End of Shoreline",
+    #fill= "End of Shoreline",
+    tag = "RTKpin_boxplots.Rmd_RTKpinchangeEvW_box2",
+    caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "none",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+RTKpinchangeEvW_box2
+```
+
+
+#This calculates the n-value for each shoreline end so that you can add it to the plot below
+```{r}
+n_values_RTKpins <- RTKpinschangeEvW %>%
+  group_by(Zone, Shoreline_End) %>%
+  summarise(n = n()) %>%
+  ungroup()
+```
+
+#This one is with marsh zone included
 ```{r}
 RTKpinchangeEvW_box <- ggplot(RTKpinschangeEvW,
                                   mapping = aes(x = Zone,
@@ -65,18 +129,21 @@ RTKpinchangeEvW_box <- ggplot(RTKpinschangeEvW,
                                   fill = Shoreline_End,
                                   color = Shoreline_End)) +
   geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
+  geom_text(data = n_values_RTKpins, 
+            aes(x = Zone, y = -25, label = paste0("n = ", n)),
+            position = position_dodge(0.55), vjust = 1, size = 3, color = "black") + #this add the n_count to the plot. vjust moves it down, and nudge_x moved it right
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbprtk) +
   coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
-  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
   labs(
     title = "RTK Measurement: Change in Sediment Pin Length",
     subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
-    y = "Sediment Pin Length (cm)",
+    y = "Change in Pin Length (cm)",
     x = "Marsh Zone",
     fill= "End of Shoreline",
-    tag = "RTKpin_boxplots.Rmd_RTKpinchangeEvW_box",
-    caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+    tag = "RTKpin_boxplots.Rmd_RTKpinchangeEvW_box") +
+    #caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=13),
         legend.title = element_text(face = "bold", size=09),
@@ -122,6 +189,7 @@ RTKpinchangeLvNL <- RTKpins %>%
   #mutate(across(where(is.numeric), ~round(., 1)))
 ```
 
+
 ```{r}
 RTKpinchangeLvNL_box <- ggplot(RTKpinchangeLvNL,
                                   mapping = aes(x = Zone,
@@ -130,6 +198,9 @@ RTKpinchangeLvNL_box <- ggplot(RTKpinchangeLvNL,
                                   fill = Log_Presence,
                                   color = log_Presence)) +
   geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  geom_text(data = n_values_RTKpins_LvNL,                              #adds n-values to plot
+            aes(x = Zone, y = -25, label = paste0("n = ", n)),
+            position = position_dodge(0.70), vjust = 1, size = 3, color = "black") +
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbprtk) +
   facet_grid(~ Shoreline_End) +
@@ -138,11 +209,11 @@ RTKpinchangeLvNL_box <- ggplot(RTKpinchangeLvNL,
   labs(
     title = "RTK Measurement: Change in Sediment Pin Length ",
     subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
-    y = "Sediment Pin Length (cm)",
+    y = "Change in Pin Length (cm)",
     x = "Marsh Zone",
     fill= "Log Presence",
-    tag = "RTKpin_boxplots.Rmd_RTKpinchangeLvNL_box",
-    caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+    tag = "RTKpin_boxplots.Rmd_RTKpinchangeLvNL_box") +
+    #caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=13),
         legend.title = element_text(face = "bold", size=09),
@@ -165,3 +236,62 @@ RTKpinchangeLvNL_box <- ggplot(RTKpinchangeLvNL,
 RTKpinchangeLvNL_box
 #Will say: Warning: Removed 3 rows containing non-finite outside the scale range (`stat_boxplot()`). This is due to having NA's for a few of the pins.  
 ```
+
+# This counts the observations for each combination
+```{r}
+n_values_RTKpins_LvNL <- RTKpinchangeLvNL %>%
+  group_by(Log_Presence, Shoreline_End, Zone) %>%
+  summarise(n = n(), .groups = 'drop')  #drop is the same as 'ungroup'
+```
+
+
+#West vs East with log variable
+```{r}
+RTKpinchangeEvWandLvNL_box <- ggplot(RTKpinchangeLvNL,
+                                  mapping = aes(x = Zone,
+                                  y = Sediment_Change,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
+  geom_text(data = n_values_RTKpins_LvNL,                              #adds n-values to plot
+            aes(x = Zone, y = -25, label = paste0("n = ", n)),
+            position = position_dodge(0.70), vjust = 1, size = 3, color = "black") +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbprtk) +
+  facet_grid(~ Log_Presence) +
+  coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
+  labs(
+    title = "RTK Measurement: Change in Sediment Pin Length ",
+    subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Change in Pin Length (cm)",
+    x = "Marsh Zone",
+    fill= "End of Shoreline",
+    tag = "RTKpin_boxplots.Rmd_RTKpinchangeEvWandLvNL_box") +
+    #caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+RTKpinchangeEvWandLvNL_box
+#Will say: Warning: Removed 3 rows containing non-finite outside the scale range (`stat_boxplot()`). This is due to having NA's for a few of the pins.  
+```
+
+

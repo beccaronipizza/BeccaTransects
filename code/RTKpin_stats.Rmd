@@ -16,6 +16,8 @@ library(emmeans)
 library(magrittr)
 library(performance)
 library(pastecs)
+library(lme4)
+library(car)
 library(DHARMa) #Interpretation of model fit
 ```
 
@@ -42,6 +44,9 @@ RTKpins_norefs <- RTKpindata_norefs %>%
   
 
 RTKpinschange_norefs <- RTKpins_norefs %>%
+  # filter(Transect_ID != "C7-L224") %>%  #removing this transect to see if it makes a difference in the model output
+  # filter(Transect_ID != "C7-L185") %>%  #removing this transect to see if it makes a difference in the model output
+  # filter(Transect_ID != "C6-L161") %>%  #removing this transect to see if it makes a difference in the model output
   mutate(UpperDiff = ((last(upper) - first(upper))*-1)*30.48) %>%  # *30.48 converts NADV88 ft to cm
   mutate(MiddleDiff = ((last(middle) - first(middle))*-1)*30.48) %>% 
   mutate(LowerDiff = ((last(lower) - first(lower))*-1)*30.48) %>% 
@@ -338,31 +343,39 @@ check_heteroscedasticity(glm6) #Data IS homoscedastic!
 
 
 
-#GLMM:
+
+
+
+
+
+
+
+
+#LMM:
 
 ```{r}
 hist(RTKpinschange_norefs$Sediment_Change)
 
-#GLMM with interactive effects:
+#LMM with interactive effects:
 
 #LOAD the data using the count difference between Aug 2022 and Aug 2023!
-rtkpin_glmm1 <-  lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+(1|Transect_ID),
+rtkpin_lmm1 <-  lmer(Sediment_Change ~ Shoreline_End*Log_Presence*Pin_Location+(1|Transect_ID),
                      data = RTKpinschange_norefs)
 
 
-summary(rtkpin_glmm1)
-Anova(rtkpin_glmm1)
+summary(rtkpin_lmm1)
+Anova(rtkpin_lmm1)
 #use emmeans if you get significant interactive effect
-emmeans(rtkpin_glmm1, pairwise ~ Shoreline_End|Pin_Location|Log_Presence)
+emmeans(rtkpin_lmm1, pairwise ~ Shoreline_End|Pin_Location|Log_Presence)
 
 
-sim_res <- simulateResiduals(rtkpin_glmm1) # generates fitted model residuals
+sim_res <- simulateResiduals(rtkpin_lmm1) # generates fitted model residuals
 plot( sim_res ) # draws diagnostic plots along with diagnostic tests
 testDispersion ( sim_res )
 
 #checking for multicollinearity between variables:
 #The output of the VIF analysis provides the Generalized Variance Inflation Factor (GVIF) for each predictor variable in your model. The GVIF measures the degree of multicollinearity for each predictor variable, taking into account all other predictor variables in the model.
-vif(rtkpin_glmm1)
+vif(rtkpin_lmm1)
 print(vif_values)
 
 #Generally, for GVIF, values above 10 or 5 are often considered indicative of high multicollinearity, meaning that the variance of the coefficient estimate for that predictor variable is inflated by a factor of 10 or 5, respectively, due to multicollinearity with the other predictor variables.

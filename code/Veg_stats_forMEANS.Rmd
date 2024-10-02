@@ -14,6 +14,7 @@ library(AICcmodavg)
 library(lme4)
 library(car)
 library(DHARMa)
+library(emmeans)
 ```
 
 ```{r}
@@ -67,6 +68,8 @@ vegdatamerged <- full_join(vegdata2, vegmetadata, by = "Transect_ID") %>%
 ```{r}
 TotalVeg_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #remove reference logs from calculation
   filter(Date == "2022-August" | Date == "2023-August") %>%
+  #filter(Transect_ID != "C1-BW12") %>%  #removing this transect to see if it makes a difference in the model output
+  #filter(Transect_ID != "C1-L11") %>%   #removing this transect to see if it makes a difference in the model output
   #filter(Date == "2023-August") %>%
   group_by(Transect_ID, Quadrat) %>% 
   arrange(Date) %>% #arrange by date so the calculations can be made below
@@ -154,9 +157,9 @@ Interactive_glmm <-  glmer.nb(count_difference + 26 ~ Shoreline_End*Log_Presence
 Interactive_glmm3 <-  lmer(sqrt(Total_Veg + 1) ~ Shoreline_End*Log_Presence*Zone+(1|Quadrat:Zone),
                       data = TotalVeg_change) #difference in veg in all three zones west vs east  **USE August 2023 data ONLY
 
-summary(Interactive_glmm3)
+summary(Interactive_glmm)
 Anova(Interactive_glmm) #Pr(>Chisq)" stands for "Probability of observing a Chi-square statistic greater than the observed value." It indicates the probability of obtaining a Chi-square statistic as extreme as, or more extreme than, the one computed from the sample data, under the null hypothesis.
-emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) #run this if there is an inteactive effect
+emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) #run this if there is an interactive effect, or if you get a significant main effect for a variable with more than two df's
 check_normality(Interactive_glmm3) #library(performance) not for glmer.nb models. Use for lmer.
 
 sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
@@ -254,7 +257,7 @@ summary(Additive_glmm)
 
 
 
-# Total SpFo Change:
+# Total SpFo Change:   IGNORE!! UPDATED DOWN BELOW!!
 ```{r}
 TotalSpFo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #remove reference logs from calculation
   filter(Date == "2022-August" | Date == "2023-August") %>%
@@ -341,7 +344,7 @@ SaPa_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #
          Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
 
-#SaPa GLMM with Julie (copied from GLMM with Julie above. Just applying her moethods. She didn't actually help me with this specific analysis.):
+#SaPa GLMM with Julie (copied from GLMM with Julie above. Just applying her methods. She didn't actually help me with this specific analysis.)
 ```{r}
 hist(SaPa_change$SaPa)
 #GLMM with interactive effects:
@@ -357,10 +360,10 @@ Interactive_glmm3 <-  lmer(sqrt(Total_Veg + 1) ~ Shoreline_End*Log_Presence*Zone
 
 summary(Interactive_glmm_SaPa)
 Anova(Interactive_glmm_SaPa) #Pr(>Chisq)" stands for "Probability of observing a Chi-square statistic greater than the observed value." It indicates the probability of obtaining a Chi-square statistic as extreme as, or more extreme than, the one computed from the sample data, under the null hypothesis.
-emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) #run this if there is an inteactive effect
+emmeans(Interactive_glmm_SaPa, pairwise ~ Zone) #run this if there is an inteactive effect, or you have a main effect of a variable with mroe than two factors
 check_normality(Interactive_glmm3) #library(performance) not for glmer.nb models. Use for lmer.
 
-sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
+sim_res <- simulateResiduals(Interactive_glmm_SaPa) # generates fitted model residuals
 plot( sim_res ) # draws diagnostic plots along with diagnostic tests
 testDispersion ( sim_res )
 ```
@@ -389,7 +392,7 @@ SpFo_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% #
          Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
 ```
 
-#SaPa GLMM with Julie (copied from GLMM with Julie above. Just applying her moethods. She didn't actually help me with this specific analysis.):
+#SpFo GLMM with Julie (copied from GLMM with Julie above. Just applying her moethods. She didn't actually help me with this specific analysis.):
 ```{r}
 hist(SpFo_change$SpFo)
 #GLMM with interactive effects:
@@ -405,8 +408,8 @@ Interactive_glmm3 <-  lmer(sqrt(Total_Veg + 1) ~ Shoreline_End*Log_Presence*Zone
 
 summary(Interactive_glmm_SpFo)
 Anova(Interactive_glmm_SpFo) #Pr(>Chisq)" stands for "Probability of observing a Chi-square statistic greater than the observed value." It indicates the probability of obtaining a Chi-square statistic as extreme as, or more extreme than, the one computed from the sample data, under the null hypothesis.
-emmeans(Interactive_glmm3, pairwise ~ Shoreline_End|Zone) #run this if there is an inteactive effect
-check_normality(Interactive_glmm3) #library(performance) not for glmer.nb models. Use for lmer.
+emmeans(Interactive_glmm_SpFo, pairwise ~ Zone) #run this if there is an inteactive effect
+check_normality(Interactive_glmm) #library(performance) not for glmer.nb models. Use for lmer.
 
 sim_res <- simulateResiduals(Interactive_glmm) # generates fitted model residuals
 plot( sim_res ) # draws diagnostic plots along with diagnostic tests

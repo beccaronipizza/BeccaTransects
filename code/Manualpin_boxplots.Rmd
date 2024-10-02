@@ -85,7 +85,7 @@ sedpinchangeLvNL_box <- ggplot(sedpinchangeLvNL,
   labs(
     title = "Manual Measurement: Change in Sediment Pin Length ",
     subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
-    y = "Sediment Pin Length (cm)",
+    y = "Change in Pin Length (cm)",
     x = "Marsh Zone",
     fill= "Log Presence",
     tag = "Manualpin_boxplots.Rmd_sedpinchangeLvNL_box",
@@ -111,6 +111,51 @@ sedpinchangeLvNL_box <- ggplot(sedpinchangeLvNL,
 
 sedpinchangeLvNL_box
 #Will say: Warning: Removed 3 rows containing non-finite outside the scale range (`stat_boxplot()`). This is due to having NA's for a few of the pins.  
+```
+
+
+#EvW with Log varible
+```{r}
+sedpinchangeEvWandLvNL_box <- ggplot(sedpinchangeLvNL,
+                                  mapping = aes(x = Zone,
+                                  y = Sediment_Change,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbpsed) +
+  facet_grid(~ Log_Presence) +
+  coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
+  labs(
+    title = "Manual Measurement: Change in Sediment Pin Length ",
+    subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
+    y = "Change in Pin Length (cm)",
+    x = "Marsh Zone",
+    fill= "End of Shoreline",
+    tag = "Manualpin_boxplots.Rmd_sedpinchangeEvWandLvNL_box",
+    caption = "*n=10 west/log, n=7 west/no log, n=12 east/log, n=9 east/no log") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+  
+  
+
+sedpinchangeEvWandLvNL_box
 ```
 
 
@@ -150,7 +195,7 @@ sedpinchangeEvW_box <- ggplot(sedpinchange,
   labs(
     title = "Manual Measurement: Change in Sediment Pin Length ",
     subtitle = "From Jun 2022 to Sep 2023   (Positive value = accretion   Negative value = erosion)",
-    y = "Sediment Pin Length (cm)",
+    y = "Change in Pin Length (cm)",
     x = "Marsh Zone",
     fill= "End of Shoreline",
     tag = "Manualpin_boxplots.Rmd_sedpinchangeEvW_box",
