@@ -14,8 +14,7 @@ vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "D
 # 1. creating the main data frame:
 
 VegDataNew <- vegdata %>% 
-  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 
-              'Taraxacum', 'Coytote_Bush','BoMa'), as.numeric) %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 'Taraxacum', 'Coytote_Bush','BoMa'), as.numeric) %>% 
   mutate_if(is.numeric, list(~replace_na(., 0))) %>%
   select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Wrack, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
   mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
@@ -586,3 +585,225 @@ LvNLplot_June <- ggplot(data = VegDataLNL_June[VegDataLNL_June$Species_code == "
 
 
 LvNLplot_June
+
+
+
+
+
+
+
+
+###Now, only for Wrack and Spergularia: ALL Veg Transects Over Time ###
+
+vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
+vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_new")
+
+
+# 1. creating the main data frame (can use this main df for both wrack and spergularia):
+
+VegDataNew_Wrack <- vegdata %>% 
+  mutate_at(c('MeIn', 'DiGr', 'RaSa', 'CaMa', 'SaSo', 'Lolium', 'FrSa', 'Fabiaceae','Vicia', 'Sonc', 'Xant', 'LeTr', 'Ranunculus', 'Taraxacum', 'Coytote_Bush','BoMa'), as.numeric) %>% 
+  mutate_if(is.numeric, list(~replace_na(., 0))) %>%
+  select(-BaGr_Type_1, -BaGr_Type_2, -Coytote_Bush, -Tot_Num_Species, -Shoot_Density, -Length_centimeters, -Patch_Type) %>% 
+  mutate(BaGr = rowSums(across(BaGr_1:BaGr_2), na.rm = T)) %>% 
+  select(-BaGr_1, -BaGr_2) %>% 
+  mutate(Total_Veg = 25-BaGr) %>%  #Total_veg is simply what is remaining after subtracting the bare ground
+  mutate(across(SpFo:Total_Veg, ~ .x*4)) %>% 
+  mutate(Date = paste0(Year, "-", Month)) %>% 
+  mutate((Wrack = replace_na(Wrack, 0)))
+
+#2. creating a new data frame before making a summary table
+
+VegDataSumm_Wrack <- VegDataNew_Wrack %>% 
+  select(Date, Zone, SpFo:Total_Veg) %>%   #selecting the columns you know you want
+  pivot_longer(cols = SpFo:Total_Veg,
+               names_to = "Species_code",
+               values_to = "Percent_cover") %>% 
+  group_by(Date, Zone, Species_code) %>% 
+  summarize(mean_cover = mean(Percent_cover, na.rm = TRUE),
+            sd_cover = sd(Percent_cover, na.rm = TRUE),
+            n_cover = n()) %>% 
+  mutate(se_cover = sd_cover/sqrt(n_cover)) %>%
+  mutate(Date = factor(Date,levels = c("2022-June", "2022-July", "2022-August", "2022-September", "2022-October", "2023-February","2023-April", "2023-June", "2023-August", "2023-October")),
+         Zone = factor(Zone, levels = c("U", "M", "L"))) %>%  
+  filter(Date != "2023-October") 
+
+
+
+
+###  PLOTTING  ####
+
+
+
+cbp <- c("#D55E00", "#009E73", "#0072B2", "#56B4E9", "#F0E442" , "#E69F00", "#000000", "#CC79A7")
+
+
+#Percent Wrack Cover Over Time By Marsh Zone
+
+
+Wrackplot <- ggplot(data = VegDataSumm_Wrack[VegDataSumm_Wrack$Species_code == "Wrack",],   
+                              mapping = aes(x = Date,
+                                            y = mean_cover,
+                                            group = Zone,
+                                            color = Zone)) +
+  #shape = Zone)) +
+  geom_line(size = 0.8, position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.8, height = 0.2, width = 0.4, color = "black", position = position_dodge(0.3)) +
+  geom_point(aes(shape = Zone, size = Zone), position = position_dodge(0.3)) + 
+  #geom_vline(xintercept= "2022-October",linetype =2, color = "red") +
+  labs( 
+    title = "Wrack Cover (%)",
+    subtitle = "Represents all transects over the course of two growing seasons (June 2022 to August 2023)",
+    x = "Date of Survey",
+    y ="Percent Cover (%)",
+    caption = "*Error bars reflect standard error",
+    #fill = "Shoreline End",
+    tag = "veg_xs_percentcover_EvW_LvNL.R-Wrackplot") +
+  scale_size_manual(values = c(5,5,5),
+                    labels = c("Upper", "Middle", "Lower"),
+                    name = "Marsh Zone") +
+  scale_color_manual(values = cbp, 
+                     labels = c("Upper", "Middle", "Lower"),
+                     name = "Marsh Zone") +
+  scale_shape_manual(values = c(15, 16, 17),
+                     labels = c("Upper", "Middle", "Lower"),
+                     name = "Marsh Zone") +
+  theme_bw(base_size = 10) +
+  scale_x_discrete(guide = guide_axis(angle = 90)) +
+  guides(color = guide_legend(title = "Marsh Zone")) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                         size=0.5, linetype="solid", 
+                                         colour ="darkgrey"),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 10),
+        plot.subtitle = element_text(size = 10),
+        strip.text = element_text(size = 13, color = "black"))
+
+
+Wrackplot 
+
+
+
+
+#Percent SpMa Cover Over Time By Marsh Zone
+
+SpMaplot <- ggplot(data = VegDataSumm_Wrack[VegDataSumm_Wrack$Species_code == "SpMa",],   
+                    mapping = aes(x = Date,
+                                  y = mean_cover,
+                                  group = Zone,
+                                  color = Zone)) +
+  #shape = Zone)) +
+  geom_line(size = 0.8, position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover,
+                    ymax = mean_cover + se_cover),
+                size = 0.8, height = 0.2, width = 0.4, color = "black", position = position_dodge(0.3)) +
+  geom_point(aes(shape = Zone, size = Zone), position = position_dodge(0.3)) + 
+  #geom_vline(xintercept= "2022-October",linetype =2, color = "red") +
+  labs( 
+    title = expression(paste(bold(" " *italic("Spergularia spp.")* " Cover (%)"))),
+    subtitle = "Represents all transects over the course of two growing seasons (June 2022 to August 2023)",
+    x = "Date of Survey",
+    y ="Spergularia spp. Percent Cover (%)",
+    caption = "*Error bars reflect standard error",
+    #fill = "Shoreline End",
+    tag = "veg_xs_percentcover_EvW_LvNL.R-Wrackplot") +
+  scale_size_manual(values = c(5,5,5),
+                    labels = c("Upper", "Middle", "Lower"),
+                    name = "Marsh Zone") +
+  scale_color_manual(values = cbp, 
+                     labels = c("Upper", "Middle", "Lower"),
+                     name = "Marsh Zone") +
+  scale_shape_manual(values = c(15, 16, 17),
+                     labels = c("Upper", "Middle", "Lower"),
+                     name = "Marsh Zone") +
+  theme_bw(base_size = 10) +
+  scale_x_discrete(guide = guide_axis(angle = 90)) +
+  guides(color = guide_legend(title = "Marsh Zone")) +
+  theme(axis.title = element_text(face = "bold", size=12),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                         size=0.5, linetype="solid", 
+                                         colour ="darkgrey"),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        axis.text.x = element_text(size = 09),
+        axis.text.y = element_text(size = 09),
+        plot.title = element_text(face = "bold", size = 11),
+        plot.caption = element_text(size = 10),
+        plot.subtitle = element_text(size = 10),
+        strip.text = element_text(size = 13, color = "black"))
+
+
+SpMaplot
+
+
+
+
+#Now faceting SpMa and Wrack into one plot:
+filtered_data <- VegDataSumm_Wrack %>%   
+  filter(Species_code %in% c("Wrack", "SpMa")) %>% #only select wrack and spergularia data
+  mutate(Species = factor(ifelse(Species_code == "SpMa", "Spergularia spp.", Species_code), 
+                          levels = c("Wrack", "Spergularia spp.")))  # Set levels to ensure Wrack is first
+  
+
+
+
+combined_plot <- ggplot(filtered_data, aes(x = Date, y = mean_cover,
+                                           group = Zone, 
+                                           color = Zone)) +
+  geom_line(size = 0.8, position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin = mean_cover - se_cover, ymax = mean_cover + se_cover),
+                size = 0.8, height = 0.2, width = 0.4, color = "black", position = position_dodge(0.3), show.legend = FALSE) +
+  geom_point(aes(shape = Zone, size = Zone), position = position_dodge(0.3)) + 
+  labs(
+    title = expression(paste(bold("Cover of Wrack and " *italic("Spergularia spp.")* " over Time(%)"))),
+    x = "Date of Survey",
+    y = "Percent Cover (%)",
+    color = "Marsh Zone",
+    shape = "Marsh Zone"
+  ) +
+  facet_wrap(~ Species, nrow = 2, labeller = as_labeller(c(Spergularia = expression(italic("Spergularia spp.")), Wrack = "Wrack"))) +  # Custom facet titles use labeller
+  scale_size_manual(values = c(5,5,5),                                 #these adjust the legend
+                    labels = c("Upper", "Middle", "Lower"),
+                    name = "Marsh Zone") +
+  scale_color_manual(values = cbp, 
+                     labels = c("Upper", "Middle", "Lower"),
+                     name = "Marsh Zone") +
+  scale_shape_manual(values = c(15, 16, 17),
+                     labels = c("Upper", "Middle", "Lower"),
+                     name = "Marsh Zone") +
+  theme_bw(base_size = 10) +
+  theme_bw(base_size = 10) +
+  guides(size = FALSE,
+         shape = guide_legend(override.aes = list(size = 4)))+ #turns off legend for size so that shape and color are reflected in the legend
+  theme(axis.title = element_text(face = "bold", size=12),
+          legend.title = element_text(face = "bold", size=15),
+          legend.text=element_text(size=15),
+          legend.position = "top",   #for no legend type: "none"
+          legend.background = element_rect(fill="lightgrey",
+                                           size=0.5, linetype="solid", 
+                                           colour ="darkgrey"),
+          plot.tag = element_text(size = 6, angle = 90),
+          plot.tag.position = "right",
+          axis.text.x = element_text(size = 09),
+          axis.text.y = element_text(size = 09),
+          plot.title = element_text(face = "bold", size = 11),
+          plot.caption = element_text(size = 10),
+          plot.subtitle = element_text(size = 10),
+          strip.text = element_text(size = 13, color = "black"))
+          
+
+# Show the plot
+print(combined_plot)

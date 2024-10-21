@@ -135,6 +135,7 @@ RTKpinchangeEvW_box <- ggplot(RTKpinschangeEvW,
             position = position_dodge(0.55), vjust = 1, size = 3, color = "black") + #this add the n_count to the plot. vjust moves it down, and nudge_x moved it right
   geom_hline(yintercept=0, linetype="dashed", color = "black") +
   scale_fill_manual(values = cbprtk) +
+  scale_x_discrete(labels = c(UpperDiff = "Upper", MiddleDiff = "Middle", LowerDiff = "Lower")) +
   coord_cartesian(ylim = c(-25, 20)) + #sets the limit of the y-axis to show a more dramatic difference bw variables
   labs(
     title = "RTK Measurement: Change in Sediment Pin Length",

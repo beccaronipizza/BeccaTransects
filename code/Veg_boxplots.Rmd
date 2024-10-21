@@ -25,9 +25,6 @@ setwd("~/GitHub/BeccaTransects/data")
 vegmetadata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Metadata")
 vegdata <- read_xlsx("~/GitHub/BeccaTransects/data/VegData_raw.xlsx", sheet = "Data_2_new") #for log zone removal use sheet = "Data2_LZ" <- make sure htat right name
 ```
-
-
-#Total Veg CHANGE DF:
 ```{r}
 ##
 #calculating change in cover for total veg (where total can exceed 25) and then the mean change for each zone, shoreline end, and log presence:
@@ -383,6 +380,7 @@ SaPa_change_box3 <- ggplot(SaPa_change2,
    fill = "End of Shoreline",
     #caption = "*Whiskers reflect 1.5*IQR",
     tag = "Veg_boxplots.Rmd-SaPa_change_box3") +
+  geom_blank(aes(y = 150)) +  # This adds extra space above the highest point
   theme_bw(base_size = 10) +
   theme(axis.title = element_text(face = "bold", size=13),
         legend.title = element_text(face = "bold", size=09),
@@ -402,15 +400,16 @@ SaPa_change_box3 <- ggplot(SaPa_change2,
   
   
 #this section adds significance lines and asteriks. Doesn't work if you include it in the code above. 
-SaPa_change_box3 <- SaPa_change_box3 +
-  geom_signif(comparisons = list(c("U", "L"), c("M","L")), map_signif_level = TRUE, annotations = "***", 
+ SaPa_change_box3 <- SaPa_change_box3 +
+   geom_signif(comparisons = list(c("U", "L"), c("M","L")), map_signif_level = TRUE, annotations = "***",
               show.legend = FALSE,
-              color = "black",
+               color = "black",
               y_position = c(
-                max(SaPa_change2$count_difference) + 10,  #adds space above the highest y-value for count_difference
-                max(SaPa_change2$count_difference) + 5), #this moves the asterisks up/down relative to the significance line
-              tip_length = 0.1, # Adjust tip length to control the length of the line from the bars
-              vjust = 0.65) #+ #Closer to 1 lowers asterisks
+                 max(SaPa_change2$count_difference) + 50,  #adds space above the highest y-value for count_difference
+                max(SaPa_change2$count_difference) + 40), #this moves the asterisks up/down relative to the significance line
+               tip_length = 0.05, # Adjust tip length to control the length of the line from the bars
+               vjust = 0.65) #+ #Closer to 1 lowers asterisks
+
   # stat_summary(
   #   fun = mean,
   #   geom = "text",
@@ -651,6 +650,7 @@ SpFo_change_box3 <- ggplot(SpFo_change,
     #caption = "*Whiskers reflect 1.5*IQR",
     tag = "Veg_boxplots.Rmd-SpFo_change_box3") +
   theme_bw(base_size = 10) +
+  geom_blank(aes(y = 150)) +  # This adds extra space above the highest point
   theme(axis.title = element_text(face = "bold", size=13),
         legend.title = element_text(face = "bold", size=09),
         legend.text=element_text(size=09),
@@ -672,15 +672,15 @@ max_y <- max(SpFo_change$count_difference)
 
 # Create a staggered y_position vector
 staggered_y_positions <- c(
-  max_y + 10,     # Base position
-  max_y + 17,     # 5 units above the base
-  max_y + 22      # 10 units above the base
+  max_y + 30,     # Base position
+  max_y + 40,     # 5 units above the base
+  max_y + 50      # 10 units above the base
 )
 
 # Add significance lines and asterisks with staggered positions
 SpFo_change_box3 <- SpFo_change_box3 +
   geom_signif(
-    comparisons = list(c("U", "M"), c("U", "L"), c("M", "L")),
+    comparisons = list(c("U", "M"), c("M", "L"), c("U", "L")),
     map_signif_level = TRUE,
     annotations = c("***", "***", "***"),
     show.legend = FALSE,
@@ -693,7 +693,102 @@ SpFo_change_box3 <- SpFo_change_box3 +
 
 SpFo_change_box3    
 ```
-  
+
+
+#K, gonna duplicate the plot above for Spergularia:
+```{r}
+SpMa_change <- vegdatamerged[(vegdatamerged$Log_Presence != "reference"),] %>% 
+  filter(Date == "2022-August" | Date == "2023-August") %>%
+  group_by(Transect_ID, Quadrat) %>% 
+  arrange(Date) %>% #arrange by date so the calculations can be made below
+  mutate(initial_count = first(SpMa),
+         final_count = last(SpMa),
+         count_difference = (final_count - initial_count)) %>%
+  ungroup() %>% 
+  filter(!(Date == "2022-August")) %>%  #this just removes the June count_difference data bc it is a repeat for the august data and we only need one calculation
+  group_by(Date, Zone, Shoreline_End, Log_Presence) %>% 
+  #summarize(mean_cover = mean(count_difference, na.rm = TRUE),   #from here down you calculate summary statistics
+  #          sd_cover = sd(count_difference, na.rm = TRUE),
+  #          n_cover = n()) %>% 
+  #mutate(se_cover = sd_cover/sqrt(n_cover)) %>% 
+  mutate(across(where(is.numeric), ~round(., 0))) %>% 
+  mutate(Shoreline_End = factor(Shoreline_End, levels = c("west", "east")),
+         Zone = factor(Zone, levels = c("U", "M", "L")),
+         Log_Presence = factor(Log_Presence, levels = c("log", "no log")))
+```
+
+```{r}
+n_values_SpMa <- SpMa_change %>%
+  group_by(Zone,Shoreline_End) %>%
+  summarize(n = n())
+```
+```{r}
+SpMa_change_box <- ggplot(SpMa_change,
+                                  mapping = aes(x = Zone,
+                                  y = count_difference,
+                                  #group = Log_Presence,
+                                  fill = Shoreline_End,
+                                  color = Shoreline_End)) +
+  geom_boxplot(position = position_dodge(0.55),color = "black", width = 0.50) +
+  stat_summary(fun.y="mean", shape = 5, size = 0.4, position = position_dodge(0.55), color = "black") + #this adds the diamond for the means
+  geom_text(data = n_values_SpMa, aes(x = Zone, y = min(SpMa_change$count_difference) - 2, 
+                                      label = paste0("n = ", n)),
+            position = position_dodge(0.55), vjust = 1, size = 3, color = "black") +
+  geom_hline(yintercept=0, linetype="dashed", color = "black") +
+  scale_fill_manual(values = cbp) +
+  #facet_grid(~ Shoreline_End) +
+  scale_x_discrete(labels = c(U = "Upper", M = "Middle", L = "Lower")) +
+  labs( 
+     title = expression(paste(bold("Change in " *italic("Spergularia spp.")* " Cover (%)"))),
+    subtitle = "From August 2022 to August 2023",
+    x = "Marsh Zone",
+    y ="Percent Cover Change (%)",
+   fill = "Shoreline_End",
+    #caption = "*Whiskers reflect 1.5*IQR",
+    tag = "Veg_boxplots.Rmd-SpFo_change_box3") +
+  theme_bw(base_size = 10) +
+  theme(axis.title = element_text(face = "bold", size=13),
+        legend.title = element_text(face = "bold", size=09),
+        legend.text=element_text(size=09),
+        legend.position = "top",   #for no legend type: "none"
+        legend.background = element_rect(fill="lightgrey",
+                                  size=0.5, linetype="solid", 
+                                  colour ="darkgrey"),
+        axis.text.x = element_text(size = 11),
+        axis.text.y = element_text(size = 10),
+        plot.title = element_text(face = "bold", size = 14),
+        plot.caption = element_text(size = 09),
+        plot.subtitle = element_text(size = 11),
+        plot.tag = element_text(size = 6, angle = 90),
+        plot.tag.position = "right",
+        strip.text = element_text(size = 13, color = "black"))
+
+# Calculate maximum y-values for the plot
+max_y <- max(SpMa_change$count_difference)
+
+# Create a staggered y_position vector
+staggered_y_positions <- c(
+  max_y + 10,     # Base position
+  max_y + 17,     # 5 units above the base
+  max_y + 22      # 10 units above the base
+)
+
+# Add significance lines and asterisks with staggered positions
+SpMa_change_box <- SpMa_change_box +
+  geom_signif(
+    comparisons = list(c("U", "M"), c("U", "L"), c("M", "L")),
+    map_signif_level = TRUE,
+    annotations = c("***", "***", "***"),
+    show.legend = FALSE,
+    color = "black",
+    y_position = staggered_y_positions[1:3],  # Use staggered positions for the lines
+    tip_length = 0,
+    vjust = 0.65
+  )
+
+
+SpMa_change_box   
+```
 
 
 # Total Change WITH Log Variable:
